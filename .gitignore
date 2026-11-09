@@ -1,0 +1,48 @@
+# Meson/Ninja
+build/
+build-*/
+builddir/
+meson-logs/
+meson-private/
+compile_commands.json
+compile_commands.json.tmp
+subprojects/*
+!subprojects/*.wrap
+!subprojects/packagefiles/
+
+# Objects and binaries
+*.o
+*.a
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+*.pdb
+/minscan
+/test_cdb
+/test_pages
+/test_descriptor
+/tests/test_cdb
+/tests/test_pages
+/tests/test_descriptor
+
+# Captures / test output
+*.raw
+*.tif
+*.tiff
+*.log
+core.*
+vgcore.*
+perf.data
+perf.data.old
+
+# Editors / tooling
+.cache/
+.clangd/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
