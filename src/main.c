@@ -233,9 +233,6 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
     arg_lit_t *ice =
         arg_litn(NULL, "ice", 0, 1,
                  "run ICE dust/scratch removal. acquires IR; the IR plane is written only with --ir or --rgbi");
-    arg_lit_t *noFlat = arg_litn(NULL, "no-flat", 0, 1, "disable the built-in flat-field correction");
-    arg_lit_t *linear =
-        arg_litn(NULL, "linear", 0, 1, "16-bit linear: coreg + balance; no colour flat/self-norm, IR debanded");
     arg_lit_t  *calibrate  = arg_litn(NULL, "calibrate", 0, 1,
                                       "run the vendor pre-scan calibration (carrier ladder, ~30 s) before acquiring");
     arg_lit_t  *verbose    = arg_litn(NULL, "verbose", 0, 1, "show info log lines (ICE rebuild stats, row counts)");
@@ -243,7 +240,7 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
     arg_lit_t  *help       = arg_litn("h", "help", 0, 1, "show this help");
     arg_end_t  *end        = arg_end(32);
     void       *argtable[] = {help, device, prescan, filmsize, glassless, dpi,       ev,      focus, frame, filmtype,
-                              ir,   ice,    rgbi,    noFlat,   linear,    calibrate, verbose, out,   end};
+                              ir,   ice,    rgbi,    calibrate, verbose,   out,       end};
 
     int nerrors = arg_parse(argc, argv, argtable);
 
@@ -475,7 +472,7 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
     uint16_t *pBase    = NULL;
     int       baseCols = 0;
 
-    if (linear->count && (writeIR || iceEnabled))
+    if (writeIR || iceEnabled)
     {
         rc = sessionReadBase(&session, is35mm, &pBase, &baseCols);
         if (rc != MS_OK)
@@ -509,7 +506,7 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
     // the 4-plane (IR) readout carries a CCD-edge gain gradient that the
     // 3-plane readout does not. flatten RGB against the raw IR column profile
     // before ICE; the 3-plane path is already flat and must stay untouched.
-    if ((rc == MS_OK) && linear->count && (imageFrame.numPlanes == 4) && (pBase != NULL))
+    if ((rc == MS_OK) && (imageFrame.numPlanes == 4) && (pBase != NULL))
     {
         const double baseStrength[3] = {0.103, 0.103, 0.091};
 
@@ -519,21 +516,13 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
     free(pBase);
     pBase = NULL;
 
-    // the large per-channel linear balance must run *after* ICE: the ICE
-    // profiles/fill were tuned on raw wire RGB (the old path had no big G/B
-    // gain before ICE). balancing first made ICE repair with the wrong levels.
-    if ((rc == MS_OK) && !linear->count && !noFlat->count)
-    {
-        rc = imageFlatBuiltin(&imageFrame, carrier.glassless, is35mm);
-    }
-
     // the IR plane is self-normalised for every 4-plane frame: its column
     // profile is illumination, and ICE turns any residual banding into colour
     // artefacts. this must run on the linear path too; the RGB planes are
     // left untouched, so the 16-bit linear output stays raw.
     if ((rc == MS_OK) && (imageFrame.numPlanes == 4))
     {
-        rc = imageNormalizePlanes(&imageFrame, false);
+        rc = imageNormalizeIr(&imageFrame);
     }
 
     if ((rc == MS_OK) && iceEnabled)
@@ -541,7 +530,7 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
         rc = iceApply(&imageFrame, (is35mm ? 4800u : 3200u) / acquisition.div);
     }
 
-    if ((rc == MS_OK) && linear->count)
+    if (rc == MS_OK)
     {
         // vendor 16-bit linear = coregistered wire + per-channel scale.
         // the scanner already applied the shading; the host applies no colour
@@ -553,7 +542,7 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
     if (rc == MS_OK)
     {
         double par = (double)acquisition.div * (double)imageFrame.rows / (is35mm ? MS_MAX_ROWS_35 : MS_MAX_ROWS_120);
-        rc         = tiffWrite(out->filename[0], &imageFrame, 0, par, rgbi->count != 0, separateIR);
+        rc         = tiffWrite(out->filename[0], &imageFrame, par, rgbi->count != 0, separateIR);
     }
 
     if (rc != MS_OK)

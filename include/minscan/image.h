@@ -35,14 +35,8 @@ int imageFrameAlloc(struct Frame *pFrame, int rows, int cols, int planes);
 /** @brief coregister image planes */
 int imageCoregPlanes(struct Frame *pFrame, bool is35);
 
-/** @brief normalize image planes (G(c) = k·m(c)^−0.950) */
-int imageNormalizePlanes(struct Frame *pFrame, bool includeImageChannels);
-
-/** @brief correct per-column illumination using a flat-field reference */
-int imageFlatCorrect(struct Frame *pFrame, const struct Frame *pFlat, unsigned smooth, double maxGain);
-
-/** @brief apply flat-field corrections */
-int imageFlatBuiltin(struct Frame *pFrame, bool glassless, bool is35mm);
+/** @brief deband the IR plane (G(c) = k·m(c)^−0.950; 4-plane frames only) */
+int imageNormalizeIr(struct Frame *pFrame);
 
 /** @brief correct the 4-plane readout column gain with the 0x83 base table
  *
@@ -53,9 +47,6 @@ int imageFlatBuiltin(struct Frame *pFrame, bool glassless, bool is35mm);
  * 3-plane path does not call this.
  */
 int imageBaseGain(struct Frame *pFrame, const uint16_t *pBase, int baseCols, const double strength[3]);
-
-/** @brief apply the vendor-style linear shading ramp to the colour planes */
-int imageRampPlanes(struct Frame *pFrame, double amplitude, bool rowAxis, bool reverse);
 
 /** @brief balance R/G/B means for 16-bit linear output
  *

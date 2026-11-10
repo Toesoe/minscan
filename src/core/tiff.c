@@ -54,11 +54,8 @@ static int tiffSetBasicTags(TIFF *pTiff, uint32_t width, uint32_t height, uint32
     return MS_OK;
 }
 
-int tiffWrite(const char *szPath, const struct Frame *pFrame, int rotate, double pixelAspect, bool rgbi,
-              bool separateIR)
+int tiffWrite(const char *szPath, const struct Frame *pFrame, double pixelAspect, bool rgbi, bool separateIR)
 {
-    (void)rotate; // currently unused
-
     if (!szPath || !pFrame || !pFrame->ppPlanes || pFrame->rows <= 0 || pFrame->cols <= 0 ||
         (pFrame->numPlanes != 1 && pFrame->numPlanes != 3 && pFrame->numPlanes != 4) ||
         (rgbi && pFrame->numPlanes < 4) || (separateIR && pFrame->numPlanes < 4) ||
