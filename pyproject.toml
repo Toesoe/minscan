@@ -1,0 +1,32 @@
+[build-system]
+requires = ["meson-python>=0.22", "meson>=1.2", "ninja"]
+build-backend = "mesonpy"
+
+[project]
+name = "minscan"
+version = "0.1.0"
+description = "Python bindings for the Minolta DiMAGE minscan C library"
+readme = "README.md"
+requires-python = ">=3.13"
+license = { text = "MIT" }
+authors = [{ name = "Toesoe", email = "code@toesoe.dev" }]
+dependencies = [
+    "cffi>=1.17",
+    "numpy>=2.0",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: C",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Graphics :: Capture :: Scanners",
+]
+
+[project.urls]
+Homepage = "https://github.com/toesoe/minscan"
+Repository = "https://github.com/toesoe/minscan"
+
+[tool.meson-python.args]
+setup = ["-Dpython_bindings=true", "-Dbuild_cli=false", "-Dbuild_tests=false"]

@@ -389,18 +389,22 @@ int main(void)
     state.media = MS_MEDIA_CODE_35MM;
     CHECK(sessionCheckCarrier(&session) == MS_OK);
     CHECK(session.isCalibrated);
+    CHECK(!session.carrierSwitched);
 
     state.media = MS_MEDIA_CODE_NONE;
     CHECK(sessionCheckCarrier(&session) == MS_OK);
     CHECK(session.isCalibrated); // eject: keep the reference
+    CHECK(!session.carrierSwitched);
 
     state.media = MS_MEDIA_CODE_35MM;
     CHECK(sessionCheckCarrier(&session) == MS_OK);
     CHECK(session.isCalibrated); // reinsert same carrier: keep
+    CHECK(!session.carrierSwitched);
 
     state.media = MS_MEDIA_CODE_120;
     CHECK(sessionCheckCarrier(&session) == MS_OK);
     CHECK(!session.isCalibrated); // switched carrier: invalidate
+    CHECK(session.carrierSwitched); // and tell the API not to restore a cache entry
 
     state.media = MS_MEDIA_CODE_35MM;
     CHECK(sessionCheckCarrier(&session) == MS_OK);

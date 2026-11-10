@@ -66,9 +66,9 @@ Available options:
   --frame=<frame>                          frame to scan (35mm: 1..6, 120: 1; default 1)
   --filmtype=<colorneg|colorpos|bw>        film type (changes exposure curves)
   --ir                                     acquire IR; write a separate _IR TIFF (also with --rgbi)
-  --ice                                    run ICE dust/scratch removal. acquires IR but the IR plane is written to disk only with --ir or --rgbi, otherwise discarded after ICE
+  --ice                                    run ICE dust/scratch removal. acquires IR; the IR plane is written only with --ir or --rgbi
   --rgbi                                   write one 64-bit RGBI TIFF (acquires IR; sidecar only with --ir)
-  --calibrate                              run pre-scan calibration before acquiring
+  --calibrate                              force refresh the scanner's dark/light calibration data
   --verbose                                show info log lines (ICE rebuild stats, row counts)
   <file>                                   output file
 ```

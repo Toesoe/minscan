@@ -2,3 +2,11 @@ option('build_tests',
   type: 'boolean',
   value: true,
   description: 'Build the golden/unit tests')
+option('build_cli',
+  type: 'boolean',
+  value: true,
+  description: 'Build the minscan command-line tool')
+option('python_bindings',
+  type: 'boolean',
+  value: false,
+  description: 'Install the Python package and bundle libminscan for meson-python')

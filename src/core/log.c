@@ -41,6 +41,11 @@ void minscanLogSetLevel(enum LogLevel level)
     g_level = level;
 }
 
+enum LogLevel minscanLogGetLevel(void)
+{
+    return g_level;
+}
+
 void minscanLog(enum LogLevel level, const char *fmt, ...)
 {
     static const char *const names[] = {"error", "warn", "info", "debug"};

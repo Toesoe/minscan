@@ -47,6 +47,17 @@ struct Acquisition
 /** @brief optional per-step focus observer */
 typedef void (*FocusLogFn)(void *pCtx, const char *szTag, int16_t focus, double metric);
 
+/** @brief coarse progress phases reported by the session */
+enum SessionPhase
+{
+    MS_PHASE_CALIBRATE = 0,
+    MS_PHASE_FOCUS     = 1,
+    MS_PHASE_SCAN      = 2,
+};
+
+/** @brief progress callback: phase, done, total */
+typedef void (*SessionProgressFn)(void *pCtx, int phase, int done, int total);
+
 /** @brief session/device state */
 struct Session
 {
@@ -63,9 +74,14 @@ struct Session
     struct Sat              sat120;       ///< cached Sat quadruple for 120
     bool                    isCalibrated;    ///< whether this session has valid shading calibration
     enum Media              calibratedMedia; ///< carrier media used for the last successful calibration
+    bool                    carrierSwitched; ///< sessionCheckCarrier saw a different carrier; do not restore cached calibration
 
     FocusLogFn pFocusLog; ///< optional focus-step observer
     void      *pFocusCtx; ///< context for @ref pFocusLog
+
+    SessionProgressFn pProgress;    ///< optional coarse progress observer
+    void             *pProgressCtx; ///< context for @ref pProgress
+    volatile bool     cancelRequested; ///< set by the caller to abort a running scan
 };
 
 /** @brief one acquired frame, planar layout */

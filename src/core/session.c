@@ -590,9 +590,15 @@ int sessionCalibrate(struct Session *pSession)
     pSession->isCalibrated = false;
 
     const uint8_t first = (pSession->carrier.media == MS_MEDIA_35MM) ? 0x06 : 0x03;
+    int           step  = 0;
 
     for (uint8_t state = first; state < (uint8_t)(first + 3u); state++)
     {
+        if (pSession->cancelRequested)
+        {
+            return MS_ERR;
+        }
+
         const size_t len = protoPage28Select(state, 0, buf);
 
         if (len == 0)
@@ -609,12 +615,22 @@ int sessionCalibrate(struct Session *pSession)
 
         minscanLog(MS_LOG_DEBUG, "calibrate: state %02x", state);
 
+        if (pSession->pProgress != NULL)
+        {
+            pSession->pProgress(pSession->pProgressCtx, MS_PHASE_CALIBRATE, step, 3);
+        }
+
         const int waitRc = sessionWaitReady(pSession, 120u * MS_PER_SEC);
 
         if (waitRc != MS_OK)
         {
             return waitRc;
         }
+        step++;
+    }
+    if (pSession->pProgress != NULL)
+    {
+        pSession->pProgress(pSession->pProgressCtx, MS_PHASE_CALIBRATE, 3, 3);
     }
 
     // the device re-measures its exposure parameters during calibration; the
@@ -625,6 +641,7 @@ int sessionCalibrate(struct Session *pSession)
     {
         pSession->isCalibrated    = true;
         pSession->calibratedMedia = pSession->carrier.media;
+        pSession->carrierSwitched = false;
     }
 
     return rc;
@@ -1091,6 +1108,15 @@ static int sessionReadBurst(struct Session *pSession, const struct Descriptor *p
             free(pRow);
             return rc;
         }
+        if (pSession->pProgress != NULL)
+        {
+            pSession->pProgress(pSession->pProgressCtx, MS_PHASE_SCAN, row + 1, plan.rows);
+        }
+        if (pSession->cancelRequested)
+        {
+            free(pRow);
+            return MS_ERR;
+        }
     }
 
     free(pRow);
@@ -1374,12 +1400,16 @@ int sessionCheckCarrier(struct Session *pSession)
                    pSession->carrier.media == MS_MEDIA_35MM ? "35mm" : "120");
     }
 
-    if (pSession->isCalibrated && (observed != pSession->calibratedMedia))
+    if (observed != pSession->calibratedMedia)
     {
-        minscanLog(MS_LOG_INFO, "carrier: %s -> %s; calibration invalidated",
-                   pSession->calibratedMedia == MS_MEDIA_35MM ? "35mm" : "120",
-                   observed == MS_MEDIA_35MM ? "35mm" : "120");
-        pSession->isCalibrated = false;
+        if (pSession->isCalibrated)
+        {
+            minscanLog(MS_LOG_INFO, "carrier: %s -> %s; calibration invalidated",
+                       pSession->calibratedMedia == MS_MEDIA_35MM ? "35mm" : "120",
+                       observed == MS_MEDIA_35MM ? "35mm" : "120");
+        }
+        pSession->isCalibrated    = false;
+        pSession->carrierSwitched = true;
     }
 
     return MS_OK;
@@ -1670,8 +1700,16 @@ int sessionAutofocus(struct Session *pSession, unsigned frame, int16_t *pOutFocu
     best        = s0;
     bestMetric  = -1.0;
 
+    int progressDone  = 0;
+    int progressTotal = MS_FOCUS_SWEEP_MAX + 2 * MS_FOCUS_SWEEP_RADIUS;
+
     for (int f = s0;; f += sgn * MS_FOCUS_SWEEP_STEP)
     {
+        if (pSession->cancelRequested)
+        {
+            rc = MS_ERR;
+            goto cleanup;
+        }
         if (sampleCount >= MS_FOCUS_SWEEP_MAX)
         {
             rc = MS_ERR_RANGE;
@@ -1689,6 +1727,10 @@ int sessionAutofocus(struct Session *pSession, unsigned frame, int16_t *pOutFocu
         samples[sampleCount].metric = metric;
         sampleCount++;
         focusLogStep(pSession, "coarse", (int16_t)f, metric);
+        if (pSession->pProgress != NULL)
+        {
+            pSession->pProgress(pSession->pProgressCtx, MS_PHASE_FOCUS, ++progressDone, progressTotal);
+        }
 
         if (metric > bestMetric)
         {
@@ -1733,6 +1775,12 @@ int sessionAutofocus(struct Session *pSession, unsigned frame, int16_t *pOutFocu
     {
         int f = fs + k * sgn;
 
+        if (pSession->cancelRequested)
+        {
+            rc = MS_ERR;
+            goto cleanup;
+        }
+
         rc = sessionFocusStep(pSession, &focusBase, MS_WORD_FOCUS, pBuf, (size_t)MS_FOCUS_LEN * MS_FOCUS_MAX_READS,
                               (int16_t)f, 5, &metric);
         if (rc != MS_OK)
@@ -1740,6 +1788,10 @@ int sessionAutofocus(struct Session *pSession, unsigned frame, int16_t *pOutFocu
             goto cleanup;
         }
         focusLogStep(pSession, "fine", (int16_t)f, metric);
+        if (pSession->pProgress != NULL)
+        {
+            pSession->pProgress(pSession->pProgressCtx, MS_PHASE_FOCUS, ++progressDone, progressTotal);
+        }
         if (metric > fineMetric)
         {
             fineMetric = metric;

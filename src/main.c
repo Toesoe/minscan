@@ -233,14 +233,13 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
     arg_lit_t *ice =
         arg_litn(NULL, "ice", 0, 1,
                  "run ICE dust/scratch removal. acquires IR; the IR plane is written only with --ir or --rgbi");
-    arg_lit_t  *calibrate  = arg_litn(NULL, "calibrate", 0, 1,
-                                      "run the vendor pre-scan calibration (carrier ladder, ~30 s) before acquiring");
-    arg_lit_t  *verbose    = arg_litn(NULL, "verbose", 0, 1, "show info log lines (ICE rebuild stats, row counts)");
-    arg_file_t *out        = arg_filen(NULL, NULL, "<file>", 1, 1, "output file");
-    arg_lit_t  *help       = arg_litn("h", "help", 0, 1, "show this help");
-    arg_end_t  *end        = arg_end(32);
-    void       *argtable[] = {help, device, prescan, filmsize, glassless, dpi,       ev,      focus, frame, filmtype,
-                              ir,   ice,    rgbi,    calibrate, verbose,   out,       end};
+    arg_lit_t *calibrate = arg_litn(NULL, "calibrate", 0, 1, "force refresh the scanner's dark/light calibration data");
+    arg_lit_t *verbose   = arg_litn(NULL, "verbose", 0, 1, "show info log lines (ICE rebuild stats, row counts)");
+    arg_file_t *out      = arg_filen(NULL, NULL, "<file>", 1, 1, "output file");
+    arg_lit_t  *help     = arg_litn("h", "help", 0, 1, "show this help");
+    arg_end_t  *end      = arg_end(32);
+    void       *argtable[] = {help,     device, prescan, filmsize, glassless, dpi,     ev,  focus, frame,
+                              filmtype, ir,     ice,     rgbi,     calibrate, verbose, out, end};
 
     int nerrors = arg_parse(argc, argv, argtable);
 
