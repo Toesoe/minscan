@@ -27,10 +27,8 @@ core_src = files(
   'src/core/exposure.c',
   'src/core/session.c',
   'src/core/image.c',
-  'src/core/raw.c',
   'src/core/tiff.c',
   'src/core/ice.c',
-  'src/core/flatdata.c',
 )
 core = static_library('mscore', core_src, include_directories: inc)
 
@@ -65,7 +63,7 @@ minscan = executable('minscan',
 if get_option('build_tests')
   test_inc = include_directories('tests')
   testdata_dir = meson.current_source_dir() / 'tests' / 'testdata'
-  foreach name : ['test_cdb', 'test_pages', 'test_descriptor', 'test_descriptor_build', 'test_session_guard', 'test_image', 'test_raw', 'test_ice', 'test_tiff', 'test_flat']
+  foreach name : ['test_cdb', 'test_pages', 'test_descriptor', 'test_descriptor_build', 'test_session_guard', 'test_image', 'test_ice', 'test_tiff', 'test_linear']
     test_src = files('tests/' + name + '.c')
     test_deps = [m_dep]
     if name == 'test_session_guard'

@@ -8,7 +8,7 @@ I wrote minscan with the idea of it supporting multiple platforms; the specifics
 
 ## notes
 
-ice is LLM-ported from nkscan (give me a break, I suck at math), currently singlethreaded, and slow as balls (think ~30 secs for a 6x9 frame). it's the first thing on the todo. I wrote the frame layout with SIMD in mind as well so let's see how much speed I can push out of this thing.
+ice is LLM-ported from nkscan (give me a break, I suck at math), currently singlethreaded, and slow as balls (think ~30 secs for a 6x9 frame). I wrote the frame layout with SIMD in mind as well so let's see how much speed I can push out of this thing. for now, negpy's IR routines are _way_ better than what I cooked up so if you care about quality give that a shot.
 
 ## build
 
@@ -31,14 +31,13 @@ meson test -C build-asan
 make sure you have the sg module loaded into your kernel first. for a regular scan of a 6x9 color negative with a scanner on /dev/sg1, IR channel in the 4th layer, using the HA-P1 glass holder:
 
 ```sh
-./minscan scan -d /dev/sg1 -s 6x9 --filmtype colorneg --dpi 3200 --focus auto --linear --rgbi output.tiff
+./minscan scan -d /dev/sg1 -s 6x9 --filmtype colorneg --dpi 3200 --focus auto --rgbi output.tiff
 ```
 
 <details>
 <summary><code>minscan help</code></summary>
 
 ```text
-  rawcheck   validate a raw frame file
   focus      focus sweep
   scan       acquire a frame
   eject      eject carrier
@@ -53,7 +52,7 @@ make sure you have the sg module loaded into your kernel first. for a regular sc
 ```text
 scan: acquire a frame
 Usage:
-  minscan  [-h|--help] -d|--device=<device> [-p|--prescan] -s|--size=<6x45|6x6|6x7|6x8|6x9|35mm> [-g|--glassless] -d|--dpi=<dpi> [-e|-v|--exposure_value=<-2.5...2.5>] [-f|--focus=<-250...250|auto>] [--frame=<frame>] --filmtype=<colorneg|colorpos|bw> [--ir] [--ice] [--rgbi] [--no-flat] [--linear] [--calibrate] <file>
+  minscan  [-h|--help] -d|--device=<device> [-p|--prescan] -s|--size=<6x45|6x6|6x7|6x8|6x9|35mm> [-g|--glassless] -d|--dpi=<dpi> [-e|-v|--exposure_value=<-2.5...2.5>] [-f|--focus=<-250...250|auto>] [--frame=<frame>] --filmtype=<colorneg|colorpos|bw> [--ir] [--ice] [--rgbi] [--calibrate] [--verbose] <file>
  
 Available options:
   -h, --help                               show this help
@@ -69,8 +68,6 @@ Available options:
   --ir                                     acquire IR; write a separate _IR TIFF (also with --rgbi)
   --ice                                    run ICE dust/scratch removal. acquires IR but the IR plane is written to disk only with --ir or --rgbi, otherwise discarded after ICE
   --rgbi                                   write one 64-bit RGBI TIFF (acquires IR; sidecar only with --ir)
-  --no-flat                                disable the built-in flat-field correction
-  --linear                                 16-bit linear: coreg + balance; no colour flat/self-norm, IR debanded
   --calibrate                              run pre-scan calibration before acquiring
   --verbose                                show info log lines (ICE rebuild stats, row counts)
   <file>                                   output file
@@ -100,7 +97,7 @@ tests/              golden CDB/page/descriptor tests
 
 ## contributing
 
-yes, please! do mark your PRs as AI-generated if they are, though; I'm not against LLM use, I used my fair share of them to simplify the RE and wire analysis but I like to know who (or in this case, what) created the code I'm looking at.
+yes, please! do mark your PRs as AI-generated if they are, though; I'm not against LLM use, I used my fair share of them to simplify the RE and wire analysis as well as the math (and I haven't written a test since 2024 or so :D) but I like to know who (or in this case, what) created the code I'm looking at.
 
 ## other projects you may like
 
