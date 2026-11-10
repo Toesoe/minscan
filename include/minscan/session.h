@@ -27,7 +27,7 @@ struct Carrier
     enum FilmType film;       ///< host-side film identity (color neg/pos, b/w)
     uint16_t      formatCode; ///< vendor format code; 0 = default for @ref media
     bool          glassless;  ///< glassless carrier/insert (only applicable for 120)
-    int           uniA;       ///< UniA holder/insert
+    int           uniA;       ///< UniA (multi-format) holder/insert
     double        ev;         ///< default manual exposure offset
 };
 
@@ -50,17 +50,19 @@ typedef void (*FocusLogFn)(void *pCtx, const char *szTag, int16_t focus, double 
 /** @brief session/device state */
 struct Session
 {
-    const struct Transport *pTransport; ///< open transport; not owned
-    struct Carrier          carrier;    ///< carrier configuration
-    struct ProtoPage24      page24;     ///< cached page 0x24 (frame group/media)
-    struct ProtoPage25      page25;     ///< cached page 0x25 (lens stage/focus)
-    struct ProtoPage28      page28;     ///< cached page 0x28 (job state/status)
-    bool                    pagesValid; ///< page24/25/28 cache is populated
-    uint16_t                dpi;        ///< current device dpi
-    int16_t                 focus;      ///< last committed focus
-    unsigned                frameGroup; ///< active frame group
-    struct Sat              sat35;      ///< cached Sat quadruple for 35mm
-    struct Sat              sat120;     ///< cached Sat quadruple for 120
+    const struct Transport *pTransport;   ///< open transport; not owned
+    struct Carrier          carrier;      ///< carrier configuration
+    struct ProtoPage24      page24;       ///< cached page 0x24 (frame group/media)
+    struct ProtoPage25      page25;       ///< cached page 0x25 (lens stage/focus)
+    struct ProtoPage28      page28;       ///< cached page 0x28 (job state/status)
+    bool                    pagesValid;   ///< page24/25/28 cache is populated
+    uint16_t                dpi;          ///< current device dpi
+    int16_t                 focus;        ///< last committed focus
+    unsigned                frameGroup;   ///< active frame group
+    struct Sat              sat35;        ///< cached Sat quadruple for 35mm
+    struct Sat              sat120;       ///< cached Sat quadruple for 120
+    bool                    isCalibrated;    ///< whether this session has valid shading calibration
+    enum Media              calibratedMedia; ///< carrier media used for the last successful calibration
 
     FocusLogFn pFocusLog; ///< optional focus-step observer
     void      *pFocusCtx; ///< context for @ref pFocusLog
@@ -93,6 +95,28 @@ int sessionSetLensStage(struct Session *pSession);
 
 /** @brief select a frame group through page 0x24 */
 int sessionSetFrameGroup(struct Session *pSession, unsigned group);
+
+/** @brief re-read the carrier and invalidate calibration if its type changed
+ *
+ * Eject/reinsert of the same carrier (page 0x24 reports no carrier in between)
+ * does not invalidate. A 120 <-> 35 mm switch does, so the next acquire or
+ * autofocus runs sessionCalibrate before scanning.
+ */
+int sessionCheckCarrier(struct Session *pSession);
+
+/** @brief run the calibration ladder
+ *
+ * scanner homes the carrier and refreshes its internal dark/white shading reference. without it the
+ * scanner keeps a stale reference and the linear wire retains the lamp/optics falloff (visible as edge flare after
+ * inversion). needs to be run once per carrier
+ */
+int sessionCalibrate(struct Session *pSession);
+
+/** @brief read the 0x83 base table (4 planes x cols u16) for a carrier
+ *
+ * 0x83 contains the fixed-pattern reference used by the 4-plane/IR path; the 3-plane path does not need it
+ */
+int sessionReadBase(struct Session *pSession, bool is35mm, uint16_t **ppBase, int *pCols);
 
 // caller selects lens stage/focus first; free with imageFrameFreePlanes
 /** @brief run one prescan or scan */

@@ -54,13 +54,15 @@ static int tiffSetBasicTags(TIFF *pTiff, uint32_t width, uint32_t height, uint32
     return MS_OK;
 }
 
-int tiffWrite(const char *szPath, const struct Frame *pFrame, int rotate, double pixelAspect, bool skipIR, bool rgbi)
+int tiffWrite(const char *szPath, const struct Frame *pFrame, int rotate, double pixelAspect, bool rgbi,
+              bool separateIR)
 {
     (void)rotate; // currently unused
 
     if (!szPath || !pFrame || !pFrame->ppPlanes || pFrame->rows <= 0 || pFrame->cols <= 0 ||
         (pFrame->numPlanes != 1 && pFrame->numPlanes != 3 && pFrame->numPlanes != 4) ||
-        (rgbi && (pFrame->numPlanes < 4 || skipIR)) || pFrame->rowStride < (size_t)(pFrame->cols * 2))
+        (rgbi && pFrame->numPlanes < 4) || (separateIR && pFrame->numPlanes < 4) ||
+        pFrame->rowStride < (size_t)(pFrame->cols * 2))
     {
         return MS_ERR_RANGE;
     }
@@ -80,11 +82,9 @@ int tiffWrite(const char *szPath, const struct Frame *pFrame, int rotate, double
     TIFF *pOutIR = nullptr;
     int   rc     = MS_OK;
 
-    const bool separateIRPlane = (!skipIR && (pFrame->numPlanes == 4) && !rgbi);
-
     char szIRTiffPath[256];
 
-    if (separateIRPlane)
+    if (separateIR)
     {
         if ((rc = pathAddSuffix(szPath, "_IR", szIRTiffPath, 256)) != MS_OK)
         {
@@ -141,7 +141,7 @@ int tiffWrite(const char *szPath, const struct Frame *pFrame, int rotate, double
         uint16_t *pRowIR = nullptr;
         size_t    stride = (pFrame->numPlanes >= 3) ? (rgbi ? 4 : 3) : 1;
 
-        if (separateIRPlane)
+        if (separateIR)
         {
             pRowIR = malloc((size_t)TIFFScanlineSize(pOutIR));
             if (!pRowIR)
@@ -161,18 +161,18 @@ int tiffWrite(const char *szPath, const struct Frame *pFrame, int rotate, double
                     pRow[x * stride + 1] = pFrame->ppPlanes[1][y * (pFrame->rowStride / 2) + x];
                     pRow[x * stride + 2] = pFrame->ppPlanes[2][y * (pFrame->rowStride / 2) + x];
 
-                    if (separateIRPlane)
+                    if (separateIR)
                     {
                         pRowIR[x] = pFrame->ppPlanes[3][y * (pFrame->rowStride / 2) + x];
                     }
-                    else if (rgbi)
+                    if (rgbi)
                     {
                         pRow[x * stride + 3] = pFrame->ppPlanes[3][y * (pFrame->rowStride / 2) + x];
                     }
                 }
             }
 
-            if (separateIRPlane)
+            if (separateIR)
             {
                 if (!TIFFWriteScanline(pOutIR, pRowIR, (uint32_t)y, 0))
                 {

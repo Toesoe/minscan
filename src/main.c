@@ -10,7 +10,6 @@
 #include "minscan/ice.h"
 #include "minscan/image.h"
 #include "minscan/proto.h"
-#include "minscan/raw.h"
 #include "minscan/session.h"
 #include "minscan/tiff.h"
 #include "minscan/time.h"
@@ -225,22 +224,26 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
         arg_strn(NULL, "filmtype", "<colorneg|colorpos|bw>", 1, 1, "film type (changes exposure curves)");
     arg_int_t *dpi   = arg_intn("d", "dpi", "<dpi>", 1, 1, "DPI for scan (must divide 4800 for 35mm or 3200 for 120)");
     arg_int_t *frame = arg_intn(NULL, "frame", "<frame>", 0, 1, "frame to scan (35mm: 1..6, 120: 1; default 1)");
-    arg_lit_t *ir =
-        arg_litn(NULL, "ir", 0, 1, "acquire IR channel. written to disk separately, unless --rgbi is passed");
+    arg_lit_t *ir    = arg_litn(NULL, "ir", 0, 1, "acquire IR; write a separate _IR TIFF (also with --rgbi)");
     arg_str_t *focus = arg_strn("f", "focus", "<-250...250|auto>", 0, 1,
                                 "auto to perform autofocus, or a manual value. defaults to stored device value");
     arg_dbl_t *ev =
         arg_dbln("ev", "exposure_value", "<-2.5...2.5>", 0, 1, "exposure compensation (stops). defaults to 0");
-    arg_lit_t *rgbi = arg_litn(NULL, "rgbi", 0, 1, "write one 64-bit RGBI TIFF (implies --ir)");
+    arg_lit_t *rgbi = arg_litn(NULL, "rgbi", 0, 1, "write one 64-bit RGBI TIFF (acquires IR; sidecar only with --ir)");
     arg_lit_t *ice =
         arg_litn(NULL, "ice", 0, 1,
                  "run ICE dust/scratch removal. acquires IR; the IR plane is written only with --ir or --rgbi");
-    arg_lit_t  *noFlat     = arg_litn(NULL, "no-flat", 0, 1, "disable the built-in flat-field correction");
+    arg_lit_t *noFlat = arg_litn(NULL, "no-flat", 0, 1, "disable the built-in flat-field correction");
+    arg_lit_t *linear =
+        arg_litn(NULL, "linear", 0, 1, "16-bit linear: coreg + balance; no colour flat/self-norm, IR debanded");
+    arg_lit_t  *calibrate  = arg_litn(NULL, "calibrate", 0, 1,
+                                      "run the vendor pre-scan calibration (carrier ladder, ~30 s) before acquiring");
+    arg_lit_t  *verbose    = arg_litn(NULL, "verbose", 0, 1, "show info log lines (ICE rebuild stats, row counts)");
     arg_file_t *out        = arg_filen(NULL, NULL, "<file>", 1, 1, "output file");
     arg_lit_t  *help       = arg_litn("h", "help", 0, 1, "show this help");
     arg_end_t  *end        = arg_end(32);
-    void       *argtable[] = {help,  device,   prescan, filmsize, glassless, dpi,    ev,  focus,
-                              frame, filmtype, ir,      ice,      rgbi,      noFlat, out, end};
+    void       *argtable[] = {help, device, prescan, filmsize, glassless, dpi,       ev,      focus, frame, filmtype,
+                              ir,   ice,    rgbi,    noFlat,   linear,    calibrate, verbose, out,   end};
 
     int nerrors = arg_parse(argc, argv, argtable);
 
@@ -255,6 +258,10 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
         scanHelp(res, argtable, end, nerrors);
         arg_freetable(argtable, sizeof argtable / sizeof argtable[0]);
         return 1;
+    }
+    if (verbose->count)
+    {
+        minscanLogSetLevel(MS_LOG_INFO);
     }
 
     // carrier/scan shape first; nothing below this point may touch the device
@@ -287,6 +294,7 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
 
     const bool iceEnabled = ice->count != 0;
     const bool writeIR    = (ir->count != 0) || (rgbi->count != 0);
+    const bool separateIR = ir->count != 0;
     int        frameNo    = frame->count ? frame->ival[0] : 1;
 
     unsigned group = 1;
@@ -414,6 +422,22 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
         return 1;
     }
 
+    if (calibrate->count)
+    {
+        printf("calibrate: pre-scan (06->07->08)...\n");
+        fflush(stdout);
+
+        rc = sessionCalibrate(&session);
+        if (rc != MS_OK)
+        {
+            minscanLog(MS_LOG_ERROR, "scan: calibrate: %s", errToString(rc));
+            transportClose(&transport);
+            arg_freetable(argtable, sizeof argtable / sizeof argtable[0]);
+            return 1;
+        }
+        printf("calibrate: done\n");
+    }
+
     if (autofocus)
     {
         session.pFocusLog = focusLog;
@@ -444,12 +468,31 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
 
     acquisition.focus = focusVal;
 
+    // the 0x83 table is the readout fixed-pattern reference for the 4-plane
+    // path; the vendor reads it before the descriptor. only needed for linear
+    // 4-plane scans, where its fine structure removes the IR-mode column
+    // banding that the 3-plane path does not have.
+    uint16_t *pBase    = NULL;
+    int       baseCols = 0;
+
+    if (linear->count && (writeIR || iceEnabled))
+    {
+        rc = sessionReadBase(&session, is35mm, &pBase, &baseCols);
+        if (rc != MS_OK)
+        {
+            minscanLog(MS_LOG_WARN, "scan: base table read failed: %s; continuing without fine gain", errToString(rc));
+            pBase    = NULL;
+            baseCols = 0;
+        }
+    }
+
     struct Frame imageFrame = {0};
 
     rc = sessionAcquire(&session, &acquisition, &imageFrame);
     if (rc != MS_OK)
     {
         minscanLog(MS_LOG_ERROR, "scan: acquire: %s", errToString(rc));
+        free(pBase);
         imageFrameFreePlanes(&imageFrame);
         transportClose(&transport);
         arg_freetable(argtable, sizeof argtable / sizeof argtable[0]);
@@ -463,12 +506,32 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
 
     rc = imageCoregPlanes(&imageFrame, is35mm);
 
-    if ((rc == MS_OK) && !noFlat->count)
+    // the 4-plane (IR) readout carries a CCD-edge gain gradient that the
+    // 3-plane readout does not. flatten RGB against the raw IR column profile
+    // before ICE; the 3-plane path is already flat and must stay untouched.
+    if ((rc == MS_OK) && linear->count && (imageFrame.numPlanes == 4) && (pBase != NULL))
+    {
+        const double baseStrength[3] = {0.103, 0.103, 0.091};
+
+        rc = imageBaseGain(&imageFrame, pBase, baseCols, baseStrength);
+    }
+
+    free(pBase);
+    pBase = NULL;
+
+    // the large per-channel linear balance must run *after* ICE: the ICE
+    // profiles/fill were tuned on raw wire RGB (the old path had no big G/B
+    // gain before ICE). balancing first made ICE repair with the wrong levels.
+    if ((rc == MS_OK) && !linear->count && !noFlat->count)
     {
         rc = imageFlatBuiltin(&imageFrame, carrier.glassless, is35mm);
     }
 
-    if (rc == MS_OK)
+    // the IR plane is self-normalised for every 4-plane frame: its column
+    // profile is illumination, and ICE turns any residual banding into colour
+    // artefacts. this must run on the linear path too; the RGB planes are
+    // left untouched, so the 16-bit linear output stays raw.
+    if ((rc == MS_OK) && (imageFrame.numPlanes == 4))
     {
         rc = imageNormalizePlanes(&imageFrame, false);
     }
@@ -478,10 +541,19 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
         rc = iceApply(&imageFrame, (is35mm ? 4800u : 3200u) / acquisition.div);
     }
 
+    if ((rc == MS_OK) && linear->count)
+    {
+        // vendor 16-bit linear = coregistered wire + per-channel scale.
+        // the scanner already applied the shading; the host applies no colour
+        // flat-field or colour self-norm. this runs after ICE so the repair
+        // fill sees raw wire levels.
+        rc = imageBalanceRgb(&imageFrame, is35mm ? 0.941 : 0.967, is35mm ? 0.940 : 0.953, is35mm ? 1.0 : 1.088);
+    }
+
     if (rc == MS_OK)
     {
         double par = (double)acquisition.div * (double)imageFrame.rows / (is35mm ? MS_MAX_ROWS_35 : MS_MAX_ROWS_120);
-        rc         = tiffWrite(out->filename[0], &imageFrame, 0, par, !writeIR, rgbi->count != 0);
+        rc         = tiffWrite(out->filename[0], &imageFrame, 0, par, !writeIR, rgbi->count != 0, separateIR);
     }
 
     if (rc != MS_OK)

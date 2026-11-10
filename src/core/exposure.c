@@ -26,7 +26,7 @@
 // 2^+-10 keeps every (Sat + 1) * scale product inside int range
 #define EV_LIMIT                       (10.0)
 
-int exposureDerive(const struct Sat *pSat, enum FilmType film, bool calibrated, double ev, bool prescan, bool ir,
+int exposureDerive(const struct Sat *pSat, enum FilmType film, bool isGlass, double ev, bool prescan, bool ir,
                    struct Exposure *pOut)
 {
     if (!pSat || !pOut)
@@ -52,7 +52,7 @@ int exposureDerive(const struct Sat *pSat, enum FilmType film, bool calibrated, 
 
     double scale[4] = {1, 1, 1, 1};
 
-    if (calibrated)
+    if (isGlass)
     {
         scale[0] = CONST_GLASS_HOLDER_EXT_INFO_R;
         scale[1] = CONST_GLASS_HOLDER_EXT_INFO_G;

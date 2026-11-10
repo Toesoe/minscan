@@ -433,9 +433,10 @@ int sessionInit(struct Session *pSession, struct Transport *pTransport, struct C
         return MS_ERR_PROTO;
     }
 
-    pSession->frameGroup = pSession->page24.frameGroup;
-    pSession->dpi        = pSession->page25.maxDPI;
-    pSession->focus      = pSession->page25.focus;
+    pSession->frameGroup      = pSession->page24.frameGroup;
+    pSession->dpi             = pSession->page25.maxDPI;
+    pSession->focus           = pSession->page25.focus;
+    pSession->calibratedMedia = observed;
 
     minscanLog(MS_LOG_DEBUG, "init: media=0x%02x frameGroup=%u maxDPI=%u focus=%+d", (unsigned)pSession->page24.media,
                pSession->page24.frameGroup, pSession->page25.maxDPI, pSession->page25.focus);
@@ -575,6 +576,105 @@ const struct Sat *sessionSatFor(const struct Session *pSession, enum Media media
     return nullptr;
 }
 
+int sessionCalibrate(struct Session *pSession)
+{
+    uint8_t buf[8];
+
+    if ((pSession == NULL) || (pSession->pTransport == NULL))
+    {
+        return MS_ERR_RANGE;
+    }
+
+    // the vendor ladder depends on the carrier: 03->04->05 on 120, 06->07->08 on 35 mm. it must be stepped, TUR after
+    // each state; sending them back-to-back leaves the device mid-move and the next state is lost
+    pSession->isCalibrated = false;
+
+    const uint8_t first = (pSession->carrier.media == MS_MEDIA_35MM) ? 0x06 : 0x03;
+
+    for (uint8_t state = first; state < (uint8_t)(first + 3u); state++)
+    {
+        const size_t len = protoPage28Select(state, 0, buf);
+
+        if (len == 0)
+        {
+            return MS_ERR_RANGE;
+        }
+
+        const int rc = writePage(pSession, buf, len);
+
+        if (rc != MS_OK)
+        {
+            return rc;
+        }
+
+        minscanLog(MS_LOG_DEBUG, "calibrate: state %02x", state);
+
+        const int waitRc = sessionWaitReady(pSession, 120u * MS_PER_SEC);
+
+        if (waitRc != MS_OK)
+        {
+            return waitRc;
+        }
+    }
+
+    // the device re-measures its exposure parameters during calibration; the
+    // vendor reads SatExpTime after the sweep, before building the descriptor
+    int rc = sessionReadSat(pSession);
+
+    if (rc == MS_OK)
+    {
+        pSession->isCalibrated    = true;
+        pSession->calibratedMedia = pSession->carrier.media;
+    }
+
+    return rc;
+}
+
+int sessionReadBase(struct Session *pSession, bool is35mm, uint16_t **ppBase, int *pCols)
+{
+    if ((pSession == NULL) || (ppBase == NULL) || (pCols == NULL))
+    {
+        return MS_ERR_RANGE;
+    }
+
+    *ppBase = NULL;
+    *pCols  = 0;
+
+    const int      cols = is35mm ? MS_MAX_COLS_35 : MS_MAX_COLS_120;
+    const uint16_t word = is35mm ? 0x0000 : 0x0001;
+    const size_t   len  = (size_t)cols * 4u * sizeof(uint16_t);
+
+    uint8_t *pBuf = malloc(len);
+
+    if (pBuf == NULL)
+    {
+        return MS_ERR_NOMEM;
+    }
+
+    const int rc = readParam(pSession, MS_SEL_INIT, word, pBuf, len);
+
+    if (rc != MS_OK)
+    {
+        free(pBuf);
+        return rc;
+    }
+
+    uint16_t *pBase = malloc(len);
+
+    if (pBase == NULL)
+    {
+        free(pBuf);
+        return MS_ERR_NOMEM;
+    }
+
+    memcpy(pBase, pBuf, len);
+    free(pBuf);
+
+    *ppBase = pBase;
+    *pCols  = cols;
+    return MS_OK;
+}
+
 static bool sessionSatIsZero(const struct Sat *pSat)
 {
     return (pSat == NULL) || ((pSat->red == 0) && (pSat->green == 0) && (pSat->blue == 0) && (pSat->ir == 0));
@@ -584,7 +684,7 @@ static int sessionDeriveExposure(const struct Session *pSession, const struct Ac
                                  struct Exposure *pOut)
 {
     const struct Sat *pSat = sessionSatFor(pSession, pSession->carrier.media);
-    bool              calibrated;
+    bool              isGlass;
     double            ev;
 
     if (pSat == NULL)
@@ -595,11 +695,11 @@ static int sessionDeriveExposure(const struct Session *pSession, const struct Ac
     // the vendor gate: 120 glass insert, or the 35 mm multi-format holder
     if (pSession->carrier.media == MS_MEDIA_120)
     {
-        calibrated = !pSession->carrier.glassless;
+        isGlass = !pSession->carrier.glassless;
     }
     else
     {
-        calibrated = (pSession->carrier.uniA != 0);
+        isGlass = (pSession->carrier.uniA != 0);
     }
 
     ev = pAcquisition->ev;
@@ -607,7 +707,7 @@ static int sessionDeriveExposure(const struct Session *pSession, const struct Ac
     {
         ev = pSession->carrier.ev;
     }
-    return exposureDerive(pSat, pSession->carrier.film, calibrated, ev, prescan, pAcquisition->ir, pOut);
+    return exposureDerive(pSat, pSession->carrier.film, isGlass, ev, prescan, pAcquisition->ir, pOut);
 }
 
 static int sessionBuildJobExposure(const struct Session *pSession, const struct Acquisition *pAcquisition, enum Job job,
@@ -1245,6 +1345,46 @@ static int acquireFail(const char *szStep, int rc)
     return rc;
 }
 
+int sessionCheckCarrier(struct Session *pSession)
+{
+    uint8_t buf[9];
+
+    if ((pSession == NULL) || (pSession->pTransport == NULL))
+    {
+        return MS_ERR_RANGE;
+    }
+
+    if (readPage(pSession, MS_PAGE_FRAME, 0x09, buf, sizeof buf) != MS_OK ||
+        protoPage24Parse(buf, sizeof buf, &pSession->page24) != MS_OK)
+    {
+        return MS_ERR_PROTO;
+    }
+
+    enum Media observed;
+
+    if (mediaForCode(pSession->page24.media, &observed) != MS_OK)
+    {
+        return MS_OK; // no carrier / unknown: keep state; eject+reinsert same is fine
+    }
+
+    if (observed != pSession->carrier.media)
+    {
+        minscanLog(MS_LOG_WARN, "carrier: device reports %s but session is configured for %s",
+                   observed == MS_MEDIA_35MM ? "35mm" : "120",
+                   pSession->carrier.media == MS_MEDIA_35MM ? "35mm" : "120");
+    }
+
+    if (pSession->isCalibrated && (observed != pSession->calibratedMedia))
+    {
+        minscanLog(MS_LOG_INFO, "carrier: %s -> %s; calibration invalidated",
+                   pSession->calibratedMedia == MS_MEDIA_35MM ? "35mm" : "120",
+                   observed == MS_MEDIA_35MM ? "35mm" : "120");
+        pSession->isCalibrated = false;
+    }
+
+    return MS_OK;
+}
+
 int sessionAcquire(struct Session *pSession, const struct Acquisition *pAcquisition, struct Frame *pFrame)
 {
     struct Descriptor job;
@@ -1267,6 +1407,22 @@ int sessionAcquire(struct Session *pSession, const struct Acquisition *pAcquisit
     if (rc != MS_OK)
     {
         return acquireFail("wait ready", rc);
+    }
+
+    rc = sessionCheckCarrier(pSession);
+    if (rc != MS_OK)
+    {
+        return acquireFail("carrier check", rc);
+    }
+
+    if (!pSession->isCalibrated)
+    {
+        rc = sessionCalibrate(pSession);
+
+        if (rc != MS_OK)
+        {
+            return acquireFail("calibrate", rc);
+        }
     }
 
     if (sessionSatIsZero(sessionSatFor(pSession, pSession->carrier.media)))
@@ -1399,6 +1555,21 @@ int sessionAutofocus(struct Session *pSession, unsigned frame, int16_t *pOutFocu
     if (rc != MS_OK)
     {
         return rc;
+    }
+
+    rc = sessionCheckCarrier(pSession);
+    if (rc != MS_OK)
+    {
+        return rc;
+    }
+    if (!pSession->isCalibrated)
+    {
+        rc = sessionCalibrate(pSession);
+
+        if (rc != MS_OK)
+        {
+            return rc;
+        }
     }
     if (sessionSatIsZero(sessionSatFor(pSession, pSession->carrier.media)))
     {

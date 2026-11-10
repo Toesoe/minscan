@@ -601,6 +601,108 @@ int imageFlatBuiltin(struct Frame *pFrame, bool glassless, bool is35mm)
     return rc;
 }
 
+int imageBaseGain(struct Frame *pFrame, const uint16_t *pBase, int baseCols, const double strength[3])
+{
+    if ((pFrame == NULL) || (pFrame->ppPlanes == NULL) || (pFrame->rows <= 0) || (pFrame->cols <= 0) ||
+        (pFrame->rowStride < (size_t)pFrame->cols * 2u) || (pBase == NULL) || (baseCols != pFrame->cols) ||
+        (strength == NULL))
+    {
+        return MS_ERR_RANGE;
+    }
+    if (pFrame->numPlanes != 4)
+    {
+        return MS_OK; // no IR-mode readout: nothing to correct
+    }
+    for (int ch = 0; ch < 3; ch++)
+    {
+        if (!isfinite(strength[ch]) || (strength[ch] < 0.0))
+        {
+            return MS_ERR_RANGE;
+        }
+    }
+
+    const int cols  = pFrame->cols;
+    double   *pGain = malloc((size_t)cols * sizeof *pGain);
+
+    if (pGain == NULL)
+    {
+        return MS_ERR_NOMEM;
+    }
+
+    int rc = MS_OK;
+
+    for (int ch = 0; (ch < 3) && (rc == MS_OK); ch++)
+    {
+        const uint16_t *pPlaneBase = pBase + (size_t)ch * (size_t)cols;
+        double          sumBase    = 0.0;
+
+        for (int col = 0; col < cols; col++) sumBase += (double)pPlaneBase[col];
+
+        if (sumBase <= 0.0) continue;
+
+        const double mean = sumBase / (double)cols;
+        double       gMin = 1e9;
+        double       gMax = 0.0;
+
+        for (int col = 0; col < cols; col++)
+        {
+            double gain = 1.0 + strength[ch] * ((double)pPlaneBase[col] / mean - 1.0);
+
+            if (gain < 0.40) gain = 0.40;
+            if (gain > 2.50) gain = 2.50;
+            pGain[col] = gain;
+            if (gain < gMin) gMin = gain;
+            if (gain > gMax) gMax = gain;
+        }
+
+        // per-channel level-preserving apply
+        uint8_t *pPlane = (uint8_t *)pFrame->ppPlanes[ch];
+        double   sumV   = 0.0;
+        double   sumVG  = 0.0;
+
+        for (int row = 0; row < pFrame->rows; row++)
+        {
+            const uint16_t *pRow = (const uint16_t *)(pPlane + (size_t)row * pFrame->rowStride);
+
+            for (int col = 0; col < cols; col++)
+            {
+                sumV += (double)pRow[col];
+                sumVG += (double)pRow[col] * pGain[col];
+            }
+        }
+
+        const double k = (sumVG > 0.0) ? (sumV / sumVG) : 1.0;
+
+        for (int row = 0; row < pFrame->rows; row++)
+        {
+            uint16_t *pRow = (uint16_t *)(pPlane + (size_t)row * pFrame->rowStride);
+
+            for (int col = 0; col < cols; col++)
+            {
+                double v = (double)pRow[col] * pGain[col] * k;
+
+                if (v <= 0.0)
+                {
+                    pRow[col] = 0;
+                }
+                else if (v >= 65535.0)
+                {
+                    pRow[col] = 65535;
+                }
+                else
+                {
+                    pRow[col] = (uint16_t)(v + 0.5);
+                }
+            }
+        }
+
+        minscanLog(MS_LOG_DEBUG, "linear: 0x83 gain ch%d strength=%.3f gain %.3f..%.3f", ch, strength[ch], gMin, gMax);
+    }
+
+    free(pGain);
+    return rc;
+}
+
 int imageRampPlanes(struct Frame *pFrame, double amplitude, bool rowAxis, bool reverse)
 {
     if ((pFrame == NULL) || (pFrame->ppPlanes == NULL) || (pFrame->rows <= 0) || (pFrame->cols <= 0) ||
@@ -688,4 +790,73 @@ void imageFrameFreePlanes(struct Frame *pFrame)
     }
     free(pFrame->ppPlanes);
     memset(pFrame, 0, sizeof(*pFrame));
+}
+
+// vendor 16-bit-linear channel balance: R is the reference, G/B are lifted to
+// the measured target ratios. this is the large gain the vendor applies before
+// the linear TIFF; it is not colour management.
+int imageBalanceRgb(struct Frame *pFrame, double targetG, double targetB, double level)
+{
+    if ((pFrame == NULL) || (pFrame->ppPlanes == NULL) || (pFrame->rows <= 0) || (pFrame->cols <= 0) ||
+        (pFrame->numPlanes < 3) || (pFrame->rowStride < (size_t)pFrame->cols * 2u))
+    {
+        return MS_ERR_RANGE;
+    }
+    if (!isfinite(targetG) || !isfinite(targetB) || !isfinite(level) || (targetG <= 0.0) || (targetB <= 0.0) ||
+        (level <= 0.0))
+    {
+        return MS_ERR_RANGE;
+    }
+
+    double mean[3] = {0.0, 0.0, 0.0};
+
+    for (int ch = 0; ch < 3; ch++)
+    {
+        const uint8_t *pBase = (const uint8_t *)pFrame->ppPlanes[ch];
+
+        for (int row = 0; row < pFrame->rows; row++)
+        {
+            const uint16_t *pRow = (const uint16_t *)(pBase + (size_t)row * pFrame->rowStride);
+
+            for (int col = 0; col < pFrame->cols; col++) mean[ch] += (double)pRow[col];
+        }
+        mean[ch] /= (double)pFrame->rows * (double)pFrame->cols;
+    }
+
+    if ((mean[0] <= 0.0) || (mean[1] <= 0.0) || (mean[2] <= 0.0)) return MS_OK;
+
+    double scale[3] = {level, level * targetG * mean[0] / mean[1], level * targetB * mean[0] / mean[2]};
+
+    for (int ch = 0; ch < 3; ch++)
+    {
+        if (scale[ch] < 0.05) scale[ch] = 0.05;
+        if (scale[ch] > 20.0) scale[ch] = 20.0;
+    }
+
+    for (int ch = 0; ch < 3; ch++)
+    {
+        uint8_t *pBase = (uint8_t *)pFrame->ppPlanes[ch];
+
+        for (int row = 0; row < pFrame->rows; row++)
+        {
+            uint16_t *pRow = (uint16_t *)(pBase + (size_t)row * pFrame->rowStride);
+
+            for (int col = 0; col < pFrame->cols; col++)
+            {
+                double v = (double)pRow[col] * scale[ch];
+
+                if (v >= 65535.0)
+                {
+                    pRow[col] = 65535;
+                }
+                else
+                {
+                    pRow[col] = (uint16_t)(v + 0.5);
+                }
+            }
+        }
+    }
+
+    minscanLog(MS_LOG_DEBUG, "linear: balance R=%.4f G=%.4f B=%.4f", scale[0], scale[1], scale[2]);
+    return MS_OK;
 }

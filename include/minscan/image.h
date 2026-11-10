@@ -22,6 +22,8 @@
 #define MS_ROW_ALIGN    (64) ///< per-plane row pitch alignment in bytes
 #define MS_MAX_ROWS_120 (10560)
 #define MS_MAX_ROWS_35  (7024)
+#define MS_MAX_COLS_120 (7128)
+#define MS_MAX_COLS_35  (4728)
 
 /** @brief bytes in one wire row */
 size_t imageWireRowBytes(int cols, int planes);
@@ -42,8 +44,24 @@ int imageFlatCorrect(struct Frame *pFrame, const struct Frame *pFlat, unsigned s
 /** @brief apply flat-field corrections */
 int imageFlatBuiltin(struct Frame *pFrame, bool glassless, bool is35mm);
 
+/** @brief correct the 4-plane readout column gain with the 0x83 base table
+ *
+ * gain[ch][col] = 1 + strength[ch] * (base[ch][col] / mean(base[ch]) - 1).
+ * The raw base carries both the broad IR-mode shading and the fine fixed
+ * pattern; one low-strength line fits the vendor ICE TIF/wire ratio to
+ * R^2 ~0.998. strength ~{0.103, 0.103, 0.091}. IR is untouched, and the
+ * 3-plane path does not call this.
+ */
+int imageBaseGain(struct Frame *pFrame, const uint16_t *pBase, int baseCols, const double strength[3]);
+
 /** @brief apply the vendor-style linear shading ramp to the colour planes */
 int imageRampPlanes(struct Frame *pFrame, double amplitude, bool rowAxis, bool reverse);
+
+/** @brief balance R/G/B means for 16-bit linear output
+ *
+ * R is the reference. G and B are scaled so their means become @p targetG and  @p targetB * R mean
+ */
+int imageBalanceRgb(struct Frame *pFrame, double targetG, double targetB, double level);
 
 // wire row is [R][G][B][IR], each plane cols u16 LE
 /** @brief unpack one wire row into the frame's per-plane buffers */

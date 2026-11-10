@@ -38,7 +38,7 @@ struct Exposure
 
 // f = trunc((Sat+1)*scale-1); IR is EV-exempt
 /** @brief derive f2..f5 from a SatExpTime quadruple */
-int exposureDerive(const struct Sat *pSat, enum FilmType film, bool calibrated, double ev, bool prescan, bool ir,
+int exposureDerive(const struct Sat *pSat, enum FilmType film, bool isGlass, double ev, bool prescan, bool ir,
                    struct Exposure *pOut);
 
 #endif // MINSCAN_EXPOSURE_H_

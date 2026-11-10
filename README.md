@@ -28,10 +28,10 @@ meson test -C build-asan
 
 ## usage
 
-make sure you have the sg module loaded into your kernel first. for a regular scan of a 6x9 color negative with a scanner on /dev/sg1, dust corrected with ICE, using the HA-P1 glass holder:
+make sure you have the sg module loaded into your kernel first. for a regular scan of a 6x9 color negative with a scanner on /dev/sg1, IR channel in the 4th layer, using the HA-P1 glass holder:
 
 ```sh
-./minscan scan -d /dev/sg1 -s 6x9 --filmtype colorneg --dpi 3200 --focus auto --ice output.tiff
+./minscan scan -d /dev/sg1 -s 6x9 --filmtype colorneg --dpi 3200 --focus auto --linear --rgbi output.tiff
 ```
 
 <details>
@@ -53,7 +53,7 @@ make sure you have the sg module loaded into your kernel first. for a regular sc
 ```text
 scan: acquire a frame
 Usage:
-  minscan  [-h|--help] -d|--device=<device> [-p|--prescan] -s|--size=<6x45|6x6|6x7|6x8|6x9|35mm> [-g|--glassless] -d|--dpi=<dpi> [-e|-v|--exposure_value=<-2.5...2.5>] [-f|--focus=<-250...250|auto>] [--frame=<frame>] --filmtype=<colorneg|colorpos|bw> [--ir] [--ice] [--rgbi] [--no-flat] <file>
+  minscan  [-h|--help] -d|--device=<device> [-p|--prescan] -s|--size=<6x45|6x6|6x7|6x8|6x9|35mm> [-g|--glassless] -d|--dpi=<dpi> [-e|-v|--exposure_value=<-2.5...2.5>] [-f|--focus=<-250...250|auto>] [--frame=<frame>] --filmtype=<colorneg|colorpos|bw> [--ir] [--ice] [--rgbi] [--no-flat] [--linear] [--calibrate] <file>
  
 Available options:
   -h, --help                               show this help
@@ -66,11 +66,25 @@ Available options:
   -f, --focus=<-250...250|auto>            auto to perform autofocus, or a manual value. defaults to stored device value
   --frame=<frame>                          frame to scan (35mm: 1..6, 120: 1; default 1)
   --filmtype=<colorneg|colorpos|bw>        film type (changes exposure curves)
-  --ir                                     acquire IR channel. written to disk separately, unless --rgbi is passed
+  --ir                                     acquire IR; write a separate _IR TIFF (also with --rgbi)
   --ice                                    run ICE dust/scratch removal. acquires IR but the IR plane is written to disk only with --ir or --rgbi, otherwise discarded after ICE
-  --rgbi                                   write one 64-bit RGBI TIFF (implies --ir)
+  --rgbi                                   write one 64-bit RGBI TIFF (acquires IR; sidecar only with --ir)
   --no-flat                                disable the built-in flat-field correction
+  --linear                                 16-bit linear: coreg + balance; no colour flat/self-norm, IR debanded
+  --calibrate                              run pre-scan calibration before acquiring
+  --verbose                                show info log lines (ICE rebuild stats, row counts)
   <file>                                   output file
+```
+
+IR/ICE output combinations:
+
+```text
+--ir                RGB + _IR sidecar
+--rgbi              4-channel RGBI
+--ir --rgbi         RGBI + _IR sidecar
+--ice               RGB (IR discarded after ICE)
+--ir --ice          RGB + _IR sidecar
+--rgbi --ice        RGBI (ICE applied to the RGB planes; IR kept as channel 4)
 ```
 </details>
 

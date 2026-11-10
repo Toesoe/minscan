@@ -48,7 +48,7 @@ int main(void)
                 frameSet(&frame, channel, row, col,
                          (uint16_t)(1000 + channel * 100 + row * 10 + col));
 
-    CHECK(tiffWrite(path, &frame, 0, 1.0, false, false) == MS_OK);
+    CHECK(tiffWrite(path, &frame, 0, 1.0, false, false, false) == MS_OK);
 
     TIFF *pIn = TIFFOpen(path, "r");
     CHECK(pIn != NULL);
@@ -94,13 +94,17 @@ int main(void)
     CHECK(snprintf(irPath, sizeof irPath, "%s_IR", path) > 0);
     unlink(irPath);
 
-    // normal separate-IR output still creates the sidecar
-    CHECK(tiffWrite(path, &frame4, 0, 1.0, false, false) == MS_OK);
+    // --ir: RGB output plus the _IR sidecar
+    CHECK(tiffWrite(path, &frame4, 0, 1.0, false, false, true) == MS_OK);
     CHECK(access(irPath, F_OK) == 0);
     unlink(irPath);
 
-    // skipIR suppresses the sidecar and writes plain RGB
-    CHECK(tiffWrite(path, &frame4, 0, 1.0, true, false) == MS_OK);
+    // plain RGB: no sidecar
+    CHECK(tiffWrite(path, &frame4, 0, 1.0, false, false, false) == MS_OK);
+    CHECK(access(irPath, F_OK) != 0);
+
+    // skipIR suppresses IR entirely and writes plain RGB
+    CHECK(tiffWrite(path, &frame4, 0, 1.0, true, false, false) == MS_OK);
     CHECK(access(irPath, F_OK) != 0);
 
     TIFF *pRgb = TIFFOpen(path, "r");
@@ -111,10 +115,22 @@ int main(void)
     TIFFClose(pRgb);
 
     // skipIR and RGBI are contradictory
-    CHECK(tiffWrite(path, &frame4, 0, 1.0, true, true) == MS_ERR_RANGE);
+    CHECK(tiffWrite(path, &frame4, 0, 1.0, true, true, false) == MS_ERR_RANGE);
 
-    // RGBI still writes 4 samples
-    CHECK(tiffWrite(path, &frame4, 0, 1.0, false, true) == MS_OK);
+    // --rgbi alone writes 4 samples, no sidecar
+    CHECK(tiffWrite(path, &frame4, 0, 1.0, false, true, false) == MS_OK);
+    CHECK(access(irPath, F_OK) != 0);
+
+    pRgb = TIFFOpen(path, "r");
+    CHECK(pRgb != NULL);
+    CHECK(TIFFGetField(pRgb, TIFFTAG_SAMPLESPERPIXEL, &samples) == 1);
+    CHECK(samples == 4);
+    TIFFClose(pRgb);
+
+    // --ir --rgbi writes 4 samples and the sidecar
+    CHECK(tiffWrite(path, &frame4, 0, 1.0, false, true, true) == MS_OK);
+    CHECK(access(irPath, F_OK) == 0);
+    unlink(irPath);
 
     pRgb = TIFFOpen(path, "r");
     CHECK(pRgb != NULL);

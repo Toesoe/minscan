@@ -357,6 +357,10 @@ int main(void)
     CHECK(sessionSetLensStage(&session) == MS_OK);
     CHECK(state.selectCount == 1);
 
+    // a scan does not re-calibrate an already-calibrated carrier
+    session.isCalibrated    = true;
+    session.calibratedMedia = MS_MEDIA_35MM;
+
     state.descriptorCount = 0;
     state.readCount       = 0;
     state.selectCount     = 0;
@@ -377,6 +381,30 @@ int main(void)
     CHECK(frame.ppPlanes != NULL);
     CHECK(frame.ppPlanes[0][0] == 0x5a5a);
     imageFrameFreePlanes(&frame);
+
+    // --- carrier switch invalidates calibration; eject/reinsert does not ---
+    session.isCalibrated    = true;
+    session.calibratedMedia = MS_MEDIA_35MM;
+
+    state.media = MS_MEDIA_CODE_35MM;
+    CHECK(sessionCheckCarrier(&session) == MS_OK);
+    CHECK(session.isCalibrated);
+
+    state.media = MS_MEDIA_CODE_NONE;
+    CHECK(sessionCheckCarrier(&session) == MS_OK);
+    CHECK(session.isCalibrated); // eject: keep the reference
+
+    state.media = MS_MEDIA_CODE_35MM;
+    CHECK(sessionCheckCarrier(&session) == MS_OK);
+    CHECK(session.isCalibrated); // reinsert same carrier: keep
+
+    state.media = MS_MEDIA_CODE_120;
+    CHECK(sessionCheckCarrier(&session) == MS_OK);
+    CHECK(!session.isCalibrated); // switched carrier: invalidate
+
+    state.media = MS_MEDIA_CODE_35MM;
+    CHECK(sessionCheckCarrier(&session) == MS_OK);
+    CHECK(!session.isCalibrated); // stays invalid until calibrated
 
     return 0;
 }
