@@ -553,7 +553,7 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
     if (rc == MS_OK)
     {
         double par = (double)acquisition.div * (double)imageFrame.rows / (is35mm ? MS_MAX_ROWS_35 : MS_MAX_ROWS_120);
-        rc         = tiffWrite(out->filename[0], &imageFrame, 0, par, !writeIR, rgbi->count != 0, separateIR);
+        rc         = tiffWrite(out->filename[0], &imageFrame, 0, par, rgbi->count != 0, separateIR);
     }
 
     if (rc != MS_OK)

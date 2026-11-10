@@ -1,20 +1,20 @@
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-
 #include <tiffio.h>
+#include <unistd.h>
 
 #include "minscan/error.h"
 #include "minscan/image.h"
 #include "minscan/tiff.h"
+
 #include "test.h"
 
 static void frameSet(struct Frame *pFrame, int plane, int row, int col, uint16_t value)
 {
     uint16_t *pRow = (uint16_t *)((uint8_t *)pFrame->ppPlanes[plane] + (size_t)row * pFrame->rowStride);
-    pRow[col] = value;
+    pRow[col]      = value;
 }
 
 static uint16_t frameGet(const struct Frame *pFrame, int plane, int row, int col)
@@ -45,10 +45,9 @@ int main(void)
     for (int channel = 0; channel < 3; channel++)
         for (int row = 0; row < rows; row++)
             for (int col = 0; col < cols; col++)
-                frameSet(&frame, channel, row, col,
-                         (uint16_t)(1000 + channel * 100 + row * 10 + col));
+                frameSet(&frame, channel, row, col, (uint16_t)(1000 + channel * 100 + row * 10 + col));
 
-    CHECK(tiffWrite(path, &frame, 0, 1.0, false, false, false) == MS_OK);
+    CHECK(tiffWrite(path, &frame, 0, 1.0, false, false) == MS_OK);
 
     TIFF *pIn = TIFFOpen(path, "r");
     CHECK(pIn != NULL);
@@ -87,24 +86,19 @@ int main(void)
     for (int channel = 0; channel < 4; channel++)
         for (int row = 0; row < rows; row++)
             for (int col = 0; col < cols; col++)
-                frameSet(&frame4, channel, row, col,
-                         (uint16_t)(2000 + channel * 100 + row * 10 + col));
+                frameSet(&frame4, channel, row, col, (uint16_t)(2000 + channel * 100 + row * 10 + col));
 
     char irPath[300];
     CHECK(snprintf(irPath, sizeof irPath, "%s_IR", path) > 0);
     unlink(irPath);
 
     // --ir: RGB output plus the _IR sidecar
-    CHECK(tiffWrite(path, &frame4, 0, 1.0, false, false, true) == MS_OK);
+    CHECK(tiffWrite(path, &frame4, 0, 1.0, false, true) == MS_OK);
     CHECK(access(irPath, F_OK) == 0);
     unlink(irPath);
 
-    // plain RGB: no sidecar
-    CHECK(tiffWrite(path, &frame4, 0, 1.0, false, false, false) == MS_OK);
-    CHECK(access(irPath, F_OK) != 0);
-
-    // skipIR suppresses IR entirely and writes plain RGB
-    CHECK(tiffWrite(path, &frame4, 0, 1.0, true, false, false) == MS_OK);
+    // plain RGB (IR omitted): no sidecar
+    CHECK(tiffWrite(path, &frame4, 0, 1.0, false, false) == MS_OK);
     CHECK(access(irPath, F_OK) != 0);
 
     TIFF *pRgb = TIFFOpen(path, "r");
@@ -114,11 +108,12 @@ int main(void)
     CHECK(samples == 3);
     TIFFClose(pRgb);
 
-    // skipIR and RGBI are contradictory
-    CHECK(tiffWrite(path, &frame4, 0, 1.0, true, true, false) == MS_ERR_RANGE);
+    // a 3-plane frame cannot request RGBI or a separate IR plane
+    CHECK(tiffWrite(path, &frame, 0, 1.0, true, false) == MS_ERR_RANGE);
+    CHECK(tiffWrite(path, &frame, 0, 1.0, false, true) == MS_ERR_RANGE);
 
     // --rgbi alone writes 4 samples, no sidecar
-    CHECK(tiffWrite(path, &frame4, 0, 1.0, false, true, false) == MS_OK);
+    CHECK(tiffWrite(path, &frame4, 0, 1.0, true, false) == MS_OK);
     CHECK(access(irPath, F_OK) != 0);
 
     pRgb = TIFFOpen(path, "r");
@@ -128,7 +123,7 @@ int main(void)
     TIFFClose(pRgb);
 
     // --ir --rgbi writes 4 samples and the sidecar
-    CHECK(tiffWrite(path, &frame4, 0, 1.0, false, true, true) == MS_OK);
+    CHECK(tiffWrite(path, &frame4, 0, 1.0, true, true) == MS_OK);
     CHECK(access(irPath, F_OK) == 0);
     unlink(irPath);
 
