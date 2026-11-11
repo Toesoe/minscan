@@ -1,7 +1,5 @@
 # Meson/Ninja
-build/
-build-*/
-builddir/
+build*/
 meson-logs/
 meson-private/
 compile_commands.json

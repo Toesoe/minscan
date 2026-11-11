@@ -1,8 +1,9 @@
-#include <string.h>
+#include "minscan/proto.h"
 
 #include "minscan/descriptor.h"
 #include "minscan/error.h"
-#include "minscan/proto.h"
+
+#include <string.h>
 
 size_t protoCDBTUR(uint8_t cdb[6])
 {

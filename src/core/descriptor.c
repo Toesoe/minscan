@@ -1,11 +1,11 @@
 #include "minscan/descriptor.h"
 
+#include "minscan/error.h"
+#include "minscan/exposure.h"
+
 #include <math.h>
 #include <stddef.h>
 #include <string.h>
-
-#include "minscan/error.h"
-#include "minscan/exposure.h"
 
 enum
 {

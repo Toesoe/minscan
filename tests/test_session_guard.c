@@ -1,10 +1,10 @@
-#include <string.h>
-
 #include "minscan/error.h"
 #include "minscan/image.h"
 #include "minscan/proto.h"
 #include "minscan/session.h"
 #include "test.h"
+
+#include <string.h>
 
 // mock transport: enough MODE SENSE/READ/SELECT to exercise the session value
 // guards without hardware. it records the last MODE SELECT so a test can prove
@@ -35,9 +35,8 @@ static void putU16BE(uint8_t *pDst, uint16_t value)
     pDst[1] = (uint8_t)(value & 0xffu);
 }
 
-static int mockExec(const struct Transport *pTransport, const uint8_t *pCdb, size_t cdbLen,
-                    enum TransportDirection dir, uint8_t *pBuf, size_t bufLen, unsigned timeoutMs,
-                    struct TransportResult *pRes)
+static int mockExec(const struct Transport *pTransport, const uint8_t *pCdb, size_t cdbLen, enum TransportDirection dir,
+                    uint8_t *pBuf, size_t bufLen, unsigned timeoutMs, struct TransportResult *pRes)
 {
     (void)cdbLen;
     (void)dir;
@@ -190,10 +189,10 @@ static void bindMock(struct Transport *pTransport, struct MockState *pState)
 
 int main(void)
 {
-    struct Transport  transport;
-    struct MockState  state;
-    struct Session    session;
-    struct Carrier    carrier = {.media = MS_MEDIA_35MM, .film = MS_FILM_MONO};
+    struct Transport transport;
+    struct MockState state;
+    struct Session   session;
+    struct Carrier   carrier = {.media = MS_MEDIA_35MM, .film = MS_FILM_MONO};
 
     // --- init: media must match the configured carrier, both ways ---
     resetMock(&state, MS_MEDIA_CODE_35MM, 3, 3200);
@@ -221,7 +220,7 @@ int main(void)
     resetMock(&state, MS_MEDIA_CODE_35MM, 1, 3200);
     bindMock(&transport, &state);
     memset(&session, 0, sizeof session);
-    session.pTransport   = &transport;
+    session.pTransport    = &transport;
     session.carrier.media = MS_MEDIA_35MM;
 
     state.selectCount = 0;
@@ -314,12 +313,12 @@ int main(void)
         .ev         = 0.0,
     };
 
-    state.turCount = 0;
+    state.turCount  = 0;
     acquisition.div = 3;
     CHECK(sessionAcquire(&session, &acquisition, &frame) == MS_ERR_RANGE);
     CHECK(state.turCount == 0);
 
-    acquisition.div = 8;
+    acquisition.div  = 8;
     acquisition.slot = 2;
     CHECK(sessionAcquire(&session, &acquisition, &frame) == MS_ERR_RANGE);
     CHECK(state.turCount == 0);
@@ -334,7 +333,7 @@ int main(void)
     CHECK(sessionAcquire(&session, &acquisition, &frame) == MS_ERR_RANGE);
     CHECK(state.turCount == 0);
 
-    acquisition.focus = 0;
+    acquisition.focus      = 0;
     acquisition.readPasses = 3;
     CHECK(sessionAcquire(&session, &acquisition, &frame) == MS_ERR_RANGE);
     CHECK(state.turCount == 0);
@@ -403,7 +402,7 @@ int main(void)
 
     state.media = MS_MEDIA_CODE_120;
     CHECK(sessionCheckCarrier(&session) == MS_OK);
-    CHECK(!session.isCalibrated); // switched carrier: invalidate
+    CHECK(!session.isCalibrated);   // switched carrier: invalidate
     CHECK(session.carrierSwitched); // and tell the API not to restore a cache entry
 
     state.media = MS_MEDIA_CODE_35MM;

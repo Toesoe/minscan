@@ -1,7 +1,7 @@
+#include "minscan/error.h"
+
 #include <stdarg.h>
 #include <stdio.h>
-
-#include "minscan/error.h"
 
 static enum LogLevel g_level = MS_LOG_WARN;
 

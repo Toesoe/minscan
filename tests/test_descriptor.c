@@ -1,8 +1,8 @@
-#include <string.h>
-
 #include "minscan/descriptor.h"
 #include "minscan/error.h"
 #include "test.h"
+
+#include <string.h>
 
 int main(void)
 {

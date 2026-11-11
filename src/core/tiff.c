@@ -1,10 +1,10 @@
 #include "minscan/tiff.h"
 
+#include "minscan/error.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <tiffio.h>
-
-#include "minscan/error.h"
 
 static int pathAddSuffix(const char *szPath, const char *szSuffix, char *pOut, size_t outLen)
 {

@@ -14,9 +14,9 @@
 #ifndef MINSCAN_EXPOSURE_H_
 #define MINSCAN_EXPOSURE_H_
 
-#include <stdint.h>
-
 #include "minscan/descriptor.h"
+
+#include <stdint.h>
 
 /** @brief live saturation exposure times read from the device */
 struct Sat

@@ -1,10 +1,4 @@
-#include <limits.h>
-#include <math.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
+#include "argtable3.h"
 #include "minscan/descriptor.h"
 #include "minscan/error.h"
 #include "minscan/ice.h"
@@ -15,7 +9,12 @@
 #include "minscan/time.h"
 #include "minscan/transport.h"
 
-#include "argtable3.h"
+#include <limits.h>
+#include <math.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 static int cmd_probe(int argc, char **argv, arg_dstr_t res, void *ctx)
 {
@@ -753,8 +752,7 @@ static int cmd_help(int argc, char **argv, arg_dstr_t res, void *ctx)
         {
             arg_cmd_info_t *info = arg_cmd_itr_value(itr);
             arg_dstr_catf(res, "  %-10s %s\n", info->name, info->description);
-        }
-        while (arg_cmd_itr_advance(itr));
+        } while (arg_cmd_itr_advance(itr));
 
         arg_cmd_itr_destroy(itr);
 

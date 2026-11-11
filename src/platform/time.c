@@ -9,10 +9,11 @@
  *
  */
 
-#include <stddef.h>
+#include "minscan/time.h"
 
 #include "minscan/error.h"
-#include "minscan/time.h"
+
+#include <stddef.h>
 
 int timeSleepMs(unsigned ms)
 {

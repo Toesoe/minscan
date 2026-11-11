@@ -1,14 +1,14 @@
-#include <stdint.h>
-#include <string.h>
-
 #include "minscan/error.h"
 #include "minscan/image.h"
 #include "test.h"
 
+#include <stdint.h>
+#include <string.h>
+
 int main(void)
 {
     struct Frame f;
-    size_t i;
+    size_t       i;
 
     memset(&f, 0, sizeof f);
     CHECK(imageWireRowBytes(891, 3) == 5346);
@@ -49,13 +49,13 @@ int main(void)
 
     // one wire row: 4 cols x 3 planes, planar-in-row, LE u16
     struct Frame g;
-    uint8_t row[4 * 3 * 2];
+    uint8_t      row[4 * 3 * 2];
     memset(&g, 0, sizeof g);
     for (int p = 0; p < 3; p++)
     {
         for (int x = 0; x < 4; x++)
         {
-            uint16_t v = (uint16_t)(p * 100 + x + 1);
+            uint16_t v               = (uint16_t)(p * 100 + x + 1);
             row[(p * 4 + x) * 2]     = (uint8_t)(v & 0xffu);
             row[(p * 4 + x) * 2 + 1] = (uint8_t)(v >> 8);
         }

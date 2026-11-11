@@ -26,14 +26,14 @@
 // delivered: no inversion or colour management
 #include "minscan/ice.h"
 
+#include "minscan/error.h"
+#include "minscan/session.h"
+
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "minscan/error.h"
-#include "minscan/session.h"
 
 // ------------------------------------------------------------------
 // constants

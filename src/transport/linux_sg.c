@@ -9,6 +9,9 @@
  *
  */
 
+#include "minscan/error.h"
+#include "minscan/transport.h"
+
 #include <errno.h>
 #include <fcntl.h>
 #include <scsi/scsi.h>
@@ -18,9 +21,6 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
-
-#include "minscan/error.h"
-#include "minscan/transport.h"
 
 #ifndef DID_OK
 #define DID_OK 0x00

@@ -5,15 +5,15 @@
 // the scene, noise streams and geometry mirror msscan so a pass means the
 // implementations agree in behaviour, not just shape. exercises the Frame
 // row-stride adapter and the read-only IR plane end to end
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "minscan/error.h"
 #include "minscan/ice.h"
 #include "minscan/image.h"
 #include "test.h"
+
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define M 65535.0f
 
@@ -26,7 +26,10 @@ static float uniform(size_t pixel, size_t channel)
     return (float)((x ^ (x >> 31)) & 0x00ffffffull) / 16777216.0f;
 }
 
-static float noise(size_t i, size_t stream) { return uniform(i, stream) - 0.5f; }
+static float noise(size_t i, size_t stream)
+{
+    return uniform(i, stream) - 0.5f;
+}
 
 // load/read a contiguous plane array into the frame's row-stride layout
 static void frameLoad(struct Frame *pFrame, uint16_t *const pPlanes[4])
@@ -63,8 +66,7 @@ static int framePlaneUnchanged(const struct Frame *pFrame, int plane, const uint
     for (int y = 0; y < pFrame->rows; y++)
     {
         const uint8_t *pRow = (const uint8_t *)pFrame->ppPlanes[plane] + (size_t)y * pFrame->rowStride;
-        if (memcmp(pRow, pWant + (size_t)y * (size_t)pFrame->cols,
-                   (size_t)pFrame->cols * sizeof(uint16_t)) != 0)
+        if (memcmp(pRow, pWant + (size_t)y * (size_t)pFrame->cols, (size_t)pFrame->cols * sizeof(uint16_t)) != 0)
         {
             return 0;
         }
@@ -74,12 +76,12 @@ static int framePlaneUnchanged(const struct Frame *pFrame, int plane, const uint
 
 int main(int argc, char **argv)
 {
-    const int   ROWS   = 200, PITCH = 100;
-    const float depths[4] = {0.03f, 0.05f, 0.10f, 0.30f};
-    const int   N         = 4;
-    const int   cols      = PITCH * N;
-    const float scene[3]  = {30000.0f, 20000.0f, 15000.0f};
-    const size_t n        = (size_t)ROWS * (size_t)cols;
+    const int    ROWS = 200, PITCH = 100;
+    const float  depths[4] = {0.03f, 0.05f, 0.10f, 0.30f};
+    const int    N         = 4;
+    const int    cols      = PITCH * N;
+    const float  scene[3]  = {30000.0f, 20000.0f, 15000.0f};
+    const size_t n         = (size_t)ROWS * (size_t)cols;
 
     uint16_t *truth[3], *planes[3], *dirty, *ir;
     for (int c = 0; c < 3; c++)
@@ -352,8 +354,7 @@ int main(int argc, char **argv)
     {
         fails++;
     }
-    printf("  bright film kept     : %zu/%zu touched (want 0)%s\n", top_chg, top_tot,
-           ok_top ? "" : "   <-- FAIL");
+    printf("  bright film kept     : %zu/%zu touched (want 0)%s\n", top_chg, top_tot, ok_top ? "" : "   <-- FAIL");
 
     printf("\ntotal: %d checks, %d failures\n", N + 4, fails);
 

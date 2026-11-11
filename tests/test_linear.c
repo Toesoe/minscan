@@ -1,11 +1,11 @@
+#include "minscan/error.h"
+#include "minscan/image.h"
+#include "test.h"
+
 #include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "minscan/error.h"
-#include "minscan/image.h"
-#include "test.h"
 
 static void frameSet(struct Frame *pFrame, int plane, int row, int col, uint16_t value)
 {
@@ -24,9 +24,9 @@ static uint16_t frameGet(const struct Frame *pFrame, int plane, int row, int col
 
 static int testBalanceAndIr(void)
 {
-    const int rows = 32;
-    const int cols = 64;
-    struct Frame f = {0};
+    const int    rows = 32;
+    const int    cols = 64;
+    struct Frame f    = {0};
 
     CHECK(imageFrameAlloc(&f, rows, cols, 4) == MS_OK);
     for (int row = 0; row < rows; row++)
@@ -91,10 +91,10 @@ static int testBalanceAndIr(void)
 
 static int testBaseGain(void)
 {
-    const int rows = 16;
-    const int cols = 256;
-    struct Frame f = {0};
-    uint16_t    base[4 * 256];
+    const int    rows = 16;
+    const int    cols = 256;
+    struct Frame f    = {0};
+    uint16_t     base[4 * 256];
 
     CHECK(imageFrameAlloc(&f, rows, cols, 4) == MS_OK);
 

@@ -1,11 +1,5 @@
 #include "minscan/capi.h"
 
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "minscan/descriptor.h"
 #include "minscan/error.h"
 #include "minscan/ice.h"
@@ -13,6 +7,12 @@
 #include "minscan/proto.h"
 #include "minscan/session.h"
 #include "minscan/transport.h"
+
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define MS_API_DEVICE_MAX 256
 

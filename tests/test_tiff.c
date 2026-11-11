@@ -1,15 +1,14 @@
+#include "minscan/error.h"
+#include "minscan/image.h"
+#include "minscan/tiff.h"
+#include "test.h"
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <tiffio.h>
 #include <unistd.h>
-
-#include "minscan/error.h"
-#include "minscan/image.h"
-#include "minscan/tiff.h"
-
-#include "test.h"
 
 static void frameSet(struct Frame *pFrame, int plane, int row, int col, uint16_t value)
 {

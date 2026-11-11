@@ -12,11 +12,11 @@
  *       POSIX systems provide both; macOS needs a different sleep backend.
  */
 
-#include <errno.h>
-#include <time.h>
-
 #include "minscan/error.h"
 #include "minscan/time.h"
+
+#include <errno.h>
+#include <time.h>
 
 int timeDeadlineAfter(unsigned ms, struct TimeDeadline *pOutDeadline)
 {
@@ -95,6 +95,5 @@ bool timeIsDeadlineExpired(const struct TimeDeadline *pDeadline)
 
     sec  = (uint64_t)now.tv_sec;
     nsec = (uint64_t)now.tv_nsec;
-    return sec > pDeadline->time_sec ||
-           (sec == pDeadline->time_sec && nsec >= pDeadline->time_nanosec);
+    return sec > pDeadline->time_sec || (sec == pDeadline->time_sec && nsec >= pDeadline->time_nanosec);
 }

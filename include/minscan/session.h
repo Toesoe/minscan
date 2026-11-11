@@ -12,13 +12,13 @@
 #ifndef MINSCAN_SESSION_H_
 #define MINSCAN_SESSION_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include "minscan/descriptor.h"
 #include "minscan/exposure.h"
 #include "minscan/proto.h"
 #include "minscan/transport.h"
+
+#include <stddef.h>
+#include <stdint.h>
 
 /** @brief physical carrier configuration; supplied by user */
 struct Carrier
@@ -61,26 +61,26 @@ typedef void (*SessionProgressFn)(void *pCtx, int phase, int done, int total);
 /** @brief session/device state */
 struct Session
 {
-    const struct Transport *pTransport;   ///< open transport; not owned
-    struct Carrier          carrier;      ///< carrier configuration
-    struct ProtoPage24      page24;       ///< cached page 0x24 (frame group/media)
-    struct ProtoPage25      page25;       ///< cached page 0x25 (lens stage/focus)
-    struct ProtoPage28      page28;       ///< cached page 0x28 (job state/status)
-    bool                    pagesValid;   ///< page24/25/28 cache is populated
-    uint16_t                dpi;          ///< current device dpi
-    int16_t                 focus;        ///< last committed focus
-    unsigned                frameGroup;   ///< active frame group
-    struct Sat              sat35;        ///< cached Sat quadruple for 35mm
-    struct Sat              sat120;       ///< cached Sat quadruple for 120
+    const struct Transport *pTransport;      ///< open transport; not owned
+    struct Carrier          carrier;         ///< carrier configuration
+    struct ProtoPage24      page24;          ///< cached page 0x24 (frame group/media)
+    struct ProtoPage25      page25;          ///< cached page 0x25 (lens stage/focus)
+    struct ProtoPage28      page28;          ///< cached page 0x28 (job state/status)
+    bool                    pagesValid;      ///< page24/25/28 cache is populated
+    uint16_t                dpi;             ///< current device dpi
+    int16_t                 focus;           ///< last committed focus
+    unsigned                frameGroup;      ///< active frame group
+    struct Sat              sat35;           ///< cached Sat quadruple for 35mm
+    struct Sat              sat120;          ///< cached Sat quadruple for 120
     bool                    isCalibrated;    ///< whether this session has valid shading calibration
     enum Media              calibratedMedia; ///< carrier media used for the last successful calibration
-    bool                    carrierSwitched; ///< sessionCheckCarrier saw a different carrier; do not restore cached calibration
+    bool carrierSwitched; ///< sessionCheckCarrier saw a different carrier; do not restore cached calibration
 
     FocusLogFn pFocusLog; ///< optional focus-step observer
     void      *pFocusCtx; ///< context for @ref pFocusLog
 
-    SessionProgressFn pProgress;    ///< optional coarse progress observer
-    void             *pProgressCtx; ///< context for @ref pProgress
+    SessionProgressFn pProgress;       ///< optional coarse progress observer
+    void             *pProgressCtx;    ///< context for @ref pProgress
     volatile bool     cancelRequested; ///< set by the caller to abort a running scan
 };
 

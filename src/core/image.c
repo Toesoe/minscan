@@ -1,10 +1,10 @@
 #include "minscan/image.h"
 
+#include "minscan/error.h"
+
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "minscan/error.h"
 
 // Minolta default is 0.762. this value only leaves ~0.7% residual IR column structure TODO: validate higher values
 #define MS_NORM_ALPHA 0.950

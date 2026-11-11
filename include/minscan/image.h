@@ -13,11 +13,11 @@
 #ifndef MINSCAN_IMAGE_H_
 #define MINSCAN_IMAGE_H_
 
+#include "minscan/session.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-
-#include "minscan/session.h"
 
 #define MS_ROW_ALIGN    (64) ///< per-plane row pitch alignment in bytes
 #define MS_MAX_ROWS_120 (10560)

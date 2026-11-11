@@ -1,14 +1,14 @@
 #include "minscan/session.h"
 
-#include <stdlib.h>
-#include <string.h>
-
 #include "minscan/descriptor.h"
 #include "minscan/error.h"
 #include "minscan/image.h"
 #include "minscan/proto.h"
 #include "minscan/time.h"
 #include "minscan/transport.h"
+
+#include <stdlib.h>
+#include <string.h>
 
 #define MS_DESC_WRITE_TIMEOUT_MS 10000u
 #define MS_READ_TIMEOUT_MS       10000u

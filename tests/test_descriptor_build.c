@@ -1,9 +1,9 @@
-#include <stdio.h>
-
 #include "minscan/descriptor.h"
 #include "minscan/error.h"
 #include "minscan/exposure.h"
 #include "test.h"
+
+#include <stdio.h>
 
 #ifndef MS_TESTDATA_DIR
 #define MS_TESTDATA_DIR "tests/testdata"
@@ -11,14 +11,14 @@
 
 struct GoldenCase
 {
-    const char    *szFile;
-    enum Media     media;
-    enum Job       job;
-    enum FilmType  film;
-    unsigned       div;
-    unsigned       slot;
-    int16_t        focus;
-    bool           ir;
+    const char     *szFile;
+    enum Media      media;
+    enum Job        job;
+    enum FilmType   film;
+    unsigned        div;
+    unsigned        slot;
+    int16_t         focus;
+    bool            ir;
     struct Exposure exposure;
 };
 
@@ -26,64 +26,95 @@ struct GoldenCase
 // golden set: msscan captures plus the 2026-11-03 same-session slot capture
 static const struct GoldenCase goldenCases[] = {
     // 6x9 colour (ICE)
-    {"desc_scan_ice_div1.bin", MS_MEDIA_120, MS_JOB_SCAN, MS_FILM_COLOUR_POS, 1, 0, 43, true,
-     {813, 733, 795, 511}},
-    {"desc_scan_ice_div2.bin", MS_MEDIA_120, MS_JOB_SCAN, MS_FILM_COLOUR_POS, 2, 0, 43, true,
-     {2328, 2115, 2252, 511}},
-    {"desc_prescan_ice_div8.bin", MS_MEDIA_120, MS_JOB_PRESCAN, MS_FILM_COLOUR_POS, 8, 0, 43, true,
-     {813, 733, 795, 511}},
-    {"desc_prescan_ice_10plus11.bin", MS_MEDIA_120, MS_JOB_PRESCAN, MS_FILM_COLOUR_POS, 8, 0, 0, true,
-     {832, 832, 832, 518}},
-    {"desc_prescan_noice_10plus11.bin", MS_MEDIA_120, MS_JOB_PRESCAN, MS_FILM_COLOUR_POS, 8, 0, 0, false,
-     {832, 832, 832, 0}},
-    {"desc_ice_0_10plus11.bin", MS_MEDIA_120, MS_JOB_PRESCAN, MS_FILM_COLOUR_POS, 8, 0, 0, true,
-     {832, 832, 832, 518}},
-    {"desc_ice_2_12.bin", MS_MEDIA_120, MS_JOB_PRESCAN, MS_FILM_COLOUR_POS, 8, 0, 0, true,
-     {832, 832, 832, 518}},
+    {"desc_scan_ice_div1.bin",              MS_MEDIA_120,  MS_JOB_SCAN,       MS_FILM_COLOUR_POS, 1, 0, 43,   true,  {813, 733, 795, 511}   },
+    {"desc_scan_ice_div2.bin",              MS_MEDIA_120,  MS_JOB_SCAN,       MS_FILM_COLOUR_POS, 2, 0, 43,   true,  {2328, 2115, 2252, 511}},
+    {"desc_prescan_ice_div8.bin",
+     MS_MEDIA_120,                                         MS_JOB_PRESCAN,
+     MS_FILM_COLOUR_POS,                                                                          8,
+     0,                                                                                                 43,
+     true,                                                                                                           {813, 733, 795, 511}   },
+    {"desc_prescan_ice_10plus11.bin",
+     MS_MEDIA_120,                                         MS_JOB_PRESCAN,
+     MS_FILM_COLOUR_POS,                                                                          8,
+     0,                                                                                                 0,
+     true,                                                                                                           {832, 832, 832, 518}   },
+    {"desc_prescan_noice_10plus11.bin",
+     MS_MEDIA_120,                                         MS_JOB_PRESCAN,
+     MS_FILM_COLOUR_POS,                                                                          8,
+     0,                                                                                                 0,
+     false,                                                                                                          {832, 832, 832, 0}     },
+    {"desc_ice_0_10plus11.bin",             MS_MEDIA_120,  MS_JOB_PRESCAN,    MS_FILM_COLOUR_POS, 8, 0, 0,    true,  {832, 832, 832, 518}   },
+    {"desc_ice_2_12.bin",                   MS_MEDIA_120,  MS_JOB_PRESCAN,    MS_FILM_COLOUR_POS, 8, 0, 0,    true,  {832, 832, 832, 518}   },
 
     // 6x9 mono
-    {"desc_mono6x9_scan_div1.bin", MS_MEDIA_120, MS_JOB_SCAN, MS_FILM_MONO, 1, 0, 0, false, {897, 897, 897, 0}},
-    {"desc_mono6x9_scan_div2.bin", MS_MEDIA_120, MS_JOB_SCAN, MS_FILM_MONO, 2, 0, 0, false, {897, 897, 897, 0}},
-    {"desc_mono6x9_scan_div4.bin", MS_MEDIA_120, MS_JOB_SCAN, MS_FILM_MONO, 4, 0, 0, false, {897, 897, 897, 0}},
-    {"desc_mono6x9_prescan_div8.bin", MS_MEDIA_120, MS_JOB_PRESCAN, MS_FILM_MONO, 8, 0, 0, false,
-     {510, 510, 510, 0}},
+    {"desc_mono6x9_scan_div1.bin",          MS_MEDIA_120,  MS_JOB_SCAN,       MS_FILM_MONO,       1, 0, 0,    false, {897, 897, 897, 0}     },
+    {"desc_mono6x9_scan_div2.bin",          MS_MEDIA_120,  MS_JOB_SCAN,       MS_FILM_MONO,       2, 0, 0,    false, {897, 897, 897, 0}     },
+    {"desc_mono6x9_scan_div4.bin",          MS_MEDIA_120,  MS_JOB_SCAN,       MS_FILM_MONO,       4, 0, 0,    false, {897, 897, 897, 0}     },
+    {"desc_mono6x9_prescan_div8.bin",       MS_MEDIA_120,  MS_JOB_PRESCAN,    MS_FILM_MONO,       8, 0, 0,    false, {510, 510, 510, 0}     },
 
     // 35 mm mono (slot B in these captures: odd frames)
-    {"desc_scan_35mm.bin", MS_MEDIA_35MM, MS_JOB_SCAN, MS_FILM_MONO, 4, 1, 0, false, {2025, 2025, 2025, 0}},
-    {"desc_mono35mm_scan_div1.bin", MS_MEDIA_35MM, MS_JOB_SCAN, MS_FILM_MONO, 1, 1, 71, false, {1951, 1951, 1951, 0}},
-    {"desc_prescan_35mm.bin", MS_MEDIA_35MM, MS_JOB_PRESCAN, MS_FILM_MONO, 8, 1, 0, false, {640, 640, 640, 0}},
+    {"desc_scan_35mm.bin",                  MS_MEDIA_35MM, MS_JOB_SCAN,       MS_FILM_MONO,       4, 1, 0,    false, {2025, 2025, 2025, 0}  },
+    {"desc_mono35mm_scan_div1.bin",         MS_MEDIA_35MM, MS_JOB_SCAN,       MS_FILM_MONO,       1, 1, 71,   false, {1951, 1951, 1951, 0}  },
+    {"desc_prescan_35mm.bin",               MS_MEDIA_35MM, MS_JOB_PRESCAN,    MS_FILM_MONO,       8, 1, 0,    false, {640, 640, 640, 0}     },
 
     // 35 mm colour (slot A in these captures)
-    {"desc_colour35mm_prescan_div8.bin", MS_MEDIA_35MM, MS_JOB_PRESCAN, MS_FILM_COLOUR_POS, 8, 0, 71, true,
-     {832, 832, 832, 586}},
-    {"desc_colour35mm_scan_div1.bin", MS_MEDIA_35MM, MS_JOB_SCAN, MS_FILM_COLOUR_POS, 1, 0, 71, true,
-     {1412, 1529, 1529, 586}},
-    {"desc_colour35mm_scan_div4.bin", MS_MEDIA_35MM, MS_JOB_SCAN, MS_FILM_COLOUR_POS, 4, 0, 71, true,
-     {987, 919, 993, 586}},
+    {"desc_colour35mm_prescan_div8.bin",
+     MS_MEDIA_35MM,                                        MS_JOB_PRESCAN,
+     MS_FILM_COLOUR_POS,                                                                          8,
+     0,                                                                                                 71,
+     true,                                                                                                           {832, 832, 832, 586}   },
+    {"desc_colour35mm_scan_div1.bin",
+     MS_MEDIA_35MM,                                        MS_JOB_SCAN,
+     MS_FILM_COLOUR_POS,                                                                          1,
+     0,                                                                                                 71,
+     true,                                                                                                           {1412, 1529, 1529, 586}},
+    {"desc_colour35mm_scan_div4.bin",
+     MS_MEDIA_35MM,                                        MS_JOB_SCAN,
+     MS_FILM_COLOUR_POS,                                                                          4,
+     0,                                                                                                 71,
+     true,                                                                                                           {987, 919, 993, 586}   },
 
     // 35 mm same-session slot capture (2026-11-03, div4 ICE off)
-    {"desc_colour35mm_scan_div4_slotA.bin", MS_MEDIA_35MM, MS_JOB_SCAN, MS_FILM_COLOUR_POS, 4, 0, 49, false,
-     {1519, 1519, 1519, 0}},
-    {"desc_colour35mm_scan_div4_slotB.bin", MS_MEDIA_35MM, MS_JOB_SCAN, MS_FILM_COLOUR_POS, 4, 1, 49, false,
-     {1488, 1488, 1488, 0}},
-    {"desc_mono35mm_scan_div4_slotA.bin", MS_MEDIA_35MM, MS_JOB_SCAN, MS_FILM_MONO, 4, 0, 49, false,
-     {4070, 4070, 4070, 0}},
-    {"desc_mono35mm_scan_div4_slotB.bin", MS_MEDIA_35MM, MS_JOB_SCAN, MS_FILM_MONO, 4, 1, 49, false,
-     {3884, 3884, 3884, 0}},
+    {"desc_colour35mm_scan_div4_slotA.bin",
+     MS_MEDIA_35MM,                                        MS_JOB_SCAN,
+     MS_FILM_COLOUR_POS,                                                                          4,
+     0,                                                                                                 49,
+     false,                                                                                                          {1519, 1519, 1519, 0}  },
+    {"desc_colour35mm_scan_div4_slotB.bin",
+     MS_MEDIA_35MM,                                        MS_JOB_SCAN,
+     MS_FILM_COLOUR_POS,                                                                          4,
+     1,                                                                                                 49,
+     false,                                                                                                          {1488, 1488, 1488, 0}  },
+    {"desc_mono35mm_scan_div4_slotA.bin",
+     MS_MEDIA_35MM,                                        MS_JOB_SCAN,
+     MS_FILM_MONO,                                                                                4,
+     0,                                                                                                 49,
+     false,                                                                                                          {4070, 4070, 4070, 0}  },
+    {"desc_mono35mm_scan_div4_slotB.bin",
+     MS_MEDIA_35MM,                                        MS_JOB_SCAN,
+     MS_FILM_MONO,                                                                                4,
+     1,                                                                                                 49,
+     false,                                                                                                          {3884, 3884, 3884, 0}  },
 
     // arming (div is the session's scan div; slot does not affect the aim)
-    {"desc_arm_35mm.bin", MS_MEDIA_35MM, MS_JOB_ARM, MS_FILM_MONO, 4, 0, 0, false, {2025, 2025, 2025, 0}},
-    {"desc_arm_ice_6x9.bin", MS_MEDIA_120, MS_JOB_ARM, MS_FILM_COLOUR_POS, 1, 0, 43, false, {813, 733, 795, 0}},
-    {"desc_colour35mm_arm2_div1.bin", MS_MEDIA_35MM, MS_JOB_ARM, MS_FILM_COLOUR_POS, 1, 0, 71, false,
-     {1412, 1529, 1529, 0}},
-    {"desc_colour35mm_arm_div1.bin", MS_MEDIA_35MM, MS_JOB_ARM, MS_FILM_COLOUR_POS, 4, 0, 71, false,
-     {987, 919, 993, 0}},
+    {"desc_arm_35mm.bin",                   MS_MEDIA_35MM, MS_JOB_ARM,        MS_FILM_MONO,       4, 0, 0,    false, {2025, 2025, 2025, 0}  },
+    {"desc_arm_ice_6x9.bin",                MS_MEDIA_120,  MS_JOB_ARM,        MS_FILM_COLOUR_POS, 1, 0, 43,   false, {813, 733, 795, 0}     },
+    {"desc_colour35mm_arm2_div1.bin",
+     MS_MEDIA_35MM,                                        MS_JOB_ARM,
+     MS_FILM_COLOUR_POS,                                                                          1,
+     0,                                                                                                 71,
+     false,                                                                                                          {1412, 1529, 1529, 0}  },
+    {"desc_colour35mm_arm_div1.bin",
+     MS_MEDIA_35MM,                                        MS_JOB_ARM,
+     MS_FILM_COLOUR_POS,                                                                          4,
+     0,                                                                                                 71,
+     false,                                                                                                          {987, 919, 993, 0}     },
 
     // focus / focus-open (class 3: the focus window is a host preset)
-    {"desc_focus_6x9.bin", MS_MEDIA_120, MS_JOB_FOCUS, MS_FILM_MONO, 1, 0, -250, false, {914, 831, 652, 0}},
-    {"desc_focus_35mm.bin", MS_MEDIA_35MM, MS_JOB_FOCUS, MS_FILM_MONO, 1, 0, 250, false, {4095, 4095, 4095, 0}},
-    {"desc_focusopen_6x9.bin", MS_MEDIA_120, MS_JOB_FOCUS_OPEN, MS_FILM_MONO, 1, 0, 0, false, {549, 499, 392, 0}},
-    {"desc_focusopen_35mm.bin", MS_MEDIA_35MM, MS_JOB_FOCUS_OPEN, MS_FILM_MONO, 1, 0, 0, false, {640, 640, 640, 0}},
+    {"desc_focus_6x9.bin",                  MS_MEDIA_120,  MS_JOB_FOCUS,      MS_FILM_MONO,       1, 0, -250, false, {914, 831, 652, 0}     },
+    {"desc_focus_35mm.bin",                 MS_MEDIA_35MM, MS_JOB_FOCUS,      MS_FILM_MONO,       1, 0, 250,  false, {4095, 4095, 4095, 0}  },
+    {"desc_focusopen_6x9.bin",              MS_MEDIA_120,  MS_JOB_FOCUS_OPEN, MS_FILM_MONO,       1, 0, 0,    false, {549, 499, 392, 0}     },
+    {"desc_focusopen_35mm.bin",             MS_MEDIA_35MM, MS_JOB_FOCUS_OPEN, MS_FILM_MONO,       1, 0, 0,    false, {640, 640, 640, 0}     },
 };
 
 static int readGolden(const char *szFile, struct Descriptor *pDescriptorOut)
@@ -224,8 +255,8 @@ static int checkRefusals(void)
 
 static int checkFormatCodes(void)
 {
-    struct Exposure exposure = {897, 897, 897, 0};
-    struct Descriptor descriptor;
+    struct Exposure             exposure = {897, 897, 897, 0};
+    struct Descriptor           descriptor;
     struct DescriptorParameters params = {
         .media      = MS_MEDIA_120,
         .job        = MS_JOB_SCAN,
@@ -259,10 +290,10 @@ int main(void)
 {
     for (size_t idx = 0; idx < sizeof goldenCases / sizeof goldenCases[0]; idx++)
     {
-        const struct GoldenCase *pCase = &goldenCases[idx];
-        struct Exposure          exposure = pCase->exposure;
-        struct Descriptor        want;
-        struct Descriptor        got;
+        const struct GoldenCase    *pCase    = &goldenCases[idx];
+        struct Exposure             exposure = pCase->exposure;
+        struct Descriptor           want;
+        struct Descriptor           got;
         struct DescriptorParameters params = {
             .media      = pCase->media,
             .job        = pCase->job,

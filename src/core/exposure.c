@@ -1,10 +1,10 @@
 #include "minscan/exposure.h"
 
-#include <math.h>
-#include <stddef.h>
-
 #include "minscan/descriptor.h"
 #include "minscan/error.h"
+
+#include <math.h>
+#include <stddef.h>
 
 // AF-5000 baseline exposure (MFSLib!FUN_10007ab0/ExtInfo) with the glass holder.
 // IR never gets a film multiplier or EV compensation
