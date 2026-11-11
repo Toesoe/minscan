@@ -911,7 +911,6 @@ int descriptorBuild(const struct DescriptorParameters *pParams, struct Descripto
     }
     else if (pParams->job == MS_JOB_ARM)
     {
-        width      = pFormat->width;
         scaledRows = 1;
     }
     else
@@ -928,7 +927,6 @@ int descriptorBuild(const struct DescriptorParameters *pParams, struct Descripto
             rows -= DESC_COLOUR_ROW_DELTA;
         }
 
-        width      = pFormat->width;
         scaledRows = (uint16_t)((unsigned)pFormat->rowUnitFactor * (unsigned)rows);
     }
 

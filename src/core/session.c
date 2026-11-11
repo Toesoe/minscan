@@ -1746,8 +1746,7 @@ int sessionAutofocus(struct Session *pSession, unsigned frame, int16_t *pOutFocu
     peak = pickFocusPeak(samples, sampleCount);
     if (peak >= 0)
     {
-        best       = samples[peak].focus;
-        bestMetric = samples[peak].metric;
+        best = samples[peak].focus;
     }
     if ((best == s0) || (best == s1))
     {
