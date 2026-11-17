@@ -1,13 +1,12 @@
 #include "argtable3.h"
 #include "minscan/descriptor.h"
 #include "minscan/error.h"
-#include "minscan/ice.h"
-#include "minscan/image.h"
 #include "minscan/proto.h"
 #include "minscan/session.h"
-#include "minscan/tiff.h"
 #include "minscan/time.h"
 #include "minscan/transport.h"
+#include "src/core/image/image.h"
+#include "src/core/tiff.h"
 
 #include <limits.h>
 #include <math.h>
@@ -520,12 +519,12 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
     // left untouched, so the 16-bit linear output stays raw.
     if ((rc == MS_OK) && (imageFrame.numPlanes == 4))
     {
-        rc = imageNormalizeIr(&imageFrame);
+        rc = imageNormalizeIR(&imageFrame);
     }
 
     if ((rc == MS_OK) && iceEnabled)
     {
-        rc = iceApply(&imageFrame, (is35mm ? 4800u : 3200u) / acquisition.div);
+        rc = imageICEApply(&imageFrame, (is35mm ? 4800u : 3200u) / acquisition.div);
     }
 
     if (rc == MS_OK)

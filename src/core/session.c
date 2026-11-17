@@ -2,10 +2,10 @@
 
 #include "minscan/descriptor.h"
 #include "minscan/error.h"
-#include "minscan/image.h"
 #include "minscan/proto.h"
 #include "minscan/time.h"
 #include "minscan/transport.h"
+#include "src/core/image/image.h"
 
 #include <stdlib.h>
 #include <string.h>

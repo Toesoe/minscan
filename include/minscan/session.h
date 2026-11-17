@@ -16,6 +16,7 @@
 #include "minscan/exposure.h"
 #include "minscan/proto.h"
 #include "minscan/transport.h"
+#include "src/core/frame.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -85,16 +86,6 @@ struct Session
 };
 
 /** @brief one acquired frame, planar layout */
-struct Frame
-{
-    uint16_t **ppPlanes;         ///< array of @ref numPlanes plane buffers; allocated by @ref imageFrameAlloc
-    size_t     len;              ///< unpadded payload bytes
-    int        rows;             ///< rows in the frame
-    int        cols;             ///< columns per plane
-    int        numPlanes;        ///< 1=mono, 3=RGB, 4=RGB+IR
-    size_t     rowStride;        ///< row pitch in bytes, at least cols*2, simd-aligned
-    bool       terminatorFailed; ///< final word&0xff00 read did not complete
-};
 
 /** @brief bind a transport/carrier, wait ready, and cache device state */
 int sessionInit(struct Session *pSession, struct Transport *pTransport, struct Carrier *pCarrier);

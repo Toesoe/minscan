@@ -2,11 +2,10 @@
 
 #include "minscan/descriptor.h"
 #include "minscan/error.h"
-#include "minscan/ice.h"
-#include "minscan/image.h"
 #include "minscan/proto.h"
 #include "minscan/session.h"
 #include "minscan/transport.h"
+#include "src/core/image/image.h"
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -430,7 +429,7 @@ int ms_scan(MsSession *session, const MsRequest *request, MsProgressFn progress,
         pBase = NULL;
         if (rc != MS_OK) goto fail_frame;
 
-        rc = imageNormalizeIr(&frame);
+        rc = imageNormalizeIR(&frame);
         if (rc != MS_OK) goto fail_frame;
     }
     else
@@ -441,7 +440,7 @@ int ms_scan(MsSession *session, const MsRequest *request, MsProgressFn progress,
 
     if (request->ice)
     {
-        rc = iceApply(&frame, (unsigned)((is35mm ? 4800u : 3200u) / div));
+        rc = imageICEApply(&frame, (unsigned)((is35mm ? 4800u : 3200u) / div));
         if (rc != MS_OK)
         {
             setError(err, errlen, "ice: %s", errToString(rc));

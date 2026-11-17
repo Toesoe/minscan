@@ -1,6 +1,6 @@
 #include "minscan/error.h"
-#include "minscan/image.h"
-#include "minscan/tiff.h"
+#include "src/core/image/image.h"
+#include "src/core/tiff.h"
 #include "test.h"
 
 #include <stdint.h>

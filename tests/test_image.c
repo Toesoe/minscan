@@ -1,5 +1,5 @@
 #include "minscan/error.h"
-#include "minscan/image.h"
+#include "src/core/image/image.h"
 #include "test.h"
 
 #include <stdint.h>

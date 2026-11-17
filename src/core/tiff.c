@@ -1,4 +1,4 @@
-#include "minscan/tiff.h"
+#include "tiff.h"
 
 #include "minscan/error.h"
 

@@ -1,7 +1,7 @@
 #include "minscan/error.h"
-#include "minscan/image.h"
 #include "minscan/proto.h"
 #include "minscan/session.h"
+#include "src/core/image/image.h"
 #include "test.h"
 
 #include <string.h>

@@ -1,4 +1,4 @@
-// reproduction of nkscan2's acceptance test for ICE through iceApply().
+// reproduction of nkscan2's acceptance test for ICE through imageICEApply().
 // mirrors dust.rs `shallow_scratches_are_rebuilt`: flat film with 1% noise,
 // IR at 85%, 3-column scratches blocking `depths`; each must return >90%.
 //
@@ -6,8 +6,7 @@
 // implementations agree in behaviour, not just shape. exercises the Frame
 // row-stride adapter and the read-only IR plane end to end
 #include "minscan/error.h"
-#include "minscan/ice.h"
-#include "minscan/image.h"
+#include "src/core/image/image.h"
 #include "test.h"
 
 #include <stdint.h>
@@ -146,15 +145,15 @@ int main(int argc, char **argv)
     // while still exercising the product profile
     const unsigned dpi = 400;
 
-    CHECK(iceApply(NULL, dpi) == MS_ERR_RANGE);
+    CHECK(imageICEApply(NULL, dpi) == MS_ERR_RANGE);
 
     struct Frame mono = {0};
     CHECK(imageFrameAlloc(&mono, 2, 4, 3) == MS_OK);
-    CHECK(iceApply(&mono, dpi) == MS_ERR_UNSUPPORTED);
+    CHECK(imageICEApply(&mono, dpi) == MS_ERR_UNSUPPORTED);
     imageFrameFreePlanes(&mono);
 
     printf("profile:     DiMAGE Scan Multi PRO\n");
-    CHECK(iceApply(&frame, dpi) == MS_OK);
+    CHECK(imageICEApply(&frame, dpi) == MS_OK);
     CHECK(framePlaneUnchanged(&frame, 3, ir)); // IR is read only
 
     uint16_t *out[3] = {planes[0], planes[1], planes[2]};
@@ -243,7 +242,7 @@ int main(int argc, char **argv)
 
     uint16_t *qin[4] = {q[0], q[1], q[2], qir};
     frameLoad(&frame, qin);
-    CHECK(iceApply(&frame, dpi) == MS_OK);
+    CHECK(imageICEApply(&frame, dpi) == MS_OK);
     CHECK(framePlaneUnchanged(&frame, 3, qir));
     frameRead(&frame, q);
 

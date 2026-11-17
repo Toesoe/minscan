@@ -27,8 +27,14 @@ core_common_src = files(
   'src/core/descriptor.c',
   'src/core/exposure.c',
   'src/core/session.c',
-  'src/core/image.c',
-  'src/core/ice.c',
+  'src/core/image/frame.c',
+        'src/core/image/coreg.c',
+        'src/core/image/ir.c',
+        'src/core/image/shading.c',
+        'src/core/image/gain.c',
+        'src/core/image/balance.c',
+        'src/core/image/ice.c',
+        'src/core/wire/unpack.c'
 )
 core_src = core_common_src + files('src/core/tiff.c')
 

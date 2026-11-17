@@ -24,10 +24,8 @@
 //
 // the profile constants are Minolta's; see g_iceProfiles. samples are used as
 // delivered: no inversion or colour management
-#include "minscan/ice.h"
-
+#include "image.h"
 #include "minscan/error.h"
-#include "minscan/session.h"
 
 #include <math.h>
 #include <stdbool.h>
@@ -1072,7 +1070,7 @@ static bool iceClean(struct Frame *pFrame, const struct IceCalibration *pCal, co
     return true;
 }
 
-int iceApply(struct Frame *pFrame, unsigned dpi)
+int imageICEApply(struct Frame *pFrame, unsigned dpi)
 {
     if ((pFrame == NULL) || (pFrame->ppPlanes == NULL) || (pFrame->rows <= 0) || (pFrame->cols <= 0) ||
         (pFrame->rowStride < (size_t)pFrame->cols * sizeof(uint16_t)))

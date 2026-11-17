@@ -1,5 +1,5 @@
 #include "minscan/error.h"
-#include "minscan/image.h"
+#include "src/core/image/image.h"
 #include "test.h"
 
 #include <math.h>
@@ -57,7 +57,7 @@ static int testBalanceAndIr(void)
 
     const double redBefore = frameGet(&f, 0, 0, 0);
 
-    CHECK(imageNormalizeIr(&f) == MS_OK);
+    CHECK(imageNormalizeIR(&f) == MS_OK);
     CHECK(frameGet(&f, 0, 0, 0) == redBefore);
 
     double even = 0.0;
