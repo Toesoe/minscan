@@ -19,7 +19,7 @@ extern "C"
 
 typedef struct MsSession MsSession;
 
-enum MsMedia
+enum MsCarrier
 {
     MS_API_MEDIA_35MM = 0,
     MS_API_MEDIA_120  = 1,
@@ -39,14 +39,14 @@ enum MsPhase
     MS_API_PHASE_SCAN      = 2,
 };
 
-typedef struct MsCarrier
+typedef struct MsLoadedCarrier
 {
-    int    media;       ///< @ref MsMedia
+    int    type;        ///< @ref MsCarrier
     int    film;        ///< @ref MsFilm
     int    format_code; ///< 0 = default for media
     int    glassless;   ///< HA-P2 insert (120 only)
     double ev;          ///< exposure offset in stops
-} MsCarrier;
+} MsLoadedCarrier;
 
 typedef struct MsRequest
 {
@@ -78,7 +78,7 @@ MsSession *ms_open(const char *device, char *err, size_t errlen);
 void ms_close(MsSession *session);
 
 /** @brief bind a carrier and read its pages; call again after a carrier switch */
-int ms_configure(MsSession *session, const MsCarrier *carrier, char *err, size_t errlen);
+int ms_configure(MsSession *session, const MsLoadedCarrier *carrier, char *err, size_t errlen);
 
 /** @brief force the vendor calibration ladder (normally automatic on first scan) */
 int ms_calibrate(MsSession *session, MsProgressFn progress, void *ctx, char *err, size_t errlen);

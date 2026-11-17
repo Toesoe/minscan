@@ -12,8 +12,8 @@
 #ifndef MINSCAN_SESSION_H_
 #define MINSCAN_SESSION_H_
 
-#include "minscan/descriptor.h"
 #include "minscan/exposure.h"
+#include "src/core/scan/request.h"
 #include "minscan/proto.h"
 #include "minscan/transport.h"
 #include "src/core/frame.h"
@@ -21,10 +21,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/** @brief physical carrier configuration; supplied by user */
-struct Carrier
+/** @brief carrier configuration; supplied by user */
+struct LoadedCarrier
 {
-    enum Media    media;      ///< 35mm or 120
+    enum Carrier  type;       ///< 35mm or 120
     enum FilmType film;       ///< host-side film identity (color neg/pos, b/w)
     uint16_t      formatCode; ///< vendor format code; 0 = default for @ref media
     bool          glassless;  ///< glassless carrier/insert (only applicable for 120)
@@ -63,7 +63,7 @@ typedef void (*SessionProgressFn)(void *pCtx, int phase, int done, int total);
 struct Session
 {
     const struct Transport *pTransport;      ///< open transport; not owned
-    struct Carrier          carrier;         ///< carrier configuration
+    struct LoadedCarrier    carrier;         ///< carrier configuration
     struct ProtoPage24      page24;          ///< cached page 0x24 (frame group/media)
     struct ProtoPage25      page25;          ///< cached page 0x25 (lens stage/focus)
     struct ProtoPage28      page28;          ///< cached page 0x28 (job state/status)
@@ -74,7 +74,7 @@ struct Session
     struct Sat              sat35;           ///< cached Sat quadruple for 35mm
     struct Sat              sat120;          ///< cached Sat quadruple for 120
     bool                    isCalibrated;    ///< whether this session has valid shading calibration
-    enum Media              calibratedMedia; ///< carrier media used for the last successful calibration
+    enum Carrier            calibratedMedia; ///< carrier media used for the last successful calibration
     bool carrierSwitched; ///< sessionCheckCarrier saw a different carrier; do not restore cached calibration
 
     FocusLogFn pFocusLog; ///< optional focus-step observer
@@ -88,13 +88,13 @@ struct Session
 /** @brief one acquired frame, planar layout */
 
 /** @brief bind a transport/carrier, wait ready, and cache device state */
-int sessionInit(struct Session *pSession, struct Transport *pTransport, struct Carrier *pCarrier);
+int sessionInit(struct Session *pSession, struct Transport *pTransport, struct LoadedCarrier *pCarrier);
 
 int sessionWaitReady(struct Session *pSession, unsigned timeoutMs);
 int sessionReadPages(struct Session *pSession);
 
 int               sessionReadSat(struct Session *pSession);
-const struct Sat *sessionSatFor(const struct Session *pSession, enum Media media);
+const struct Sat *sessionSatFor(const struct Session *pSession, enum Carrier media);
 
 // focus resets to 0 when the stage changes
 /** @brief select the lens stage implied by the carrier */

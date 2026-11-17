@@ -21,13 +21,13 @@ import numpy as np
 _CDEF = """
 typedef struct MsSession MsSession;
 
-typedef struct MsCarrier {
+typedef struct MsLoadedCarrier {
     int media;
     int film;
     int format_code;
     int glassless;
     double ev;
-} MsCarrier;
+} MsLoadedCarrier;
 
 typedef struct MsRequest {
     int dpi;
@@ -46,7 +46,7 @@ typedef void (*MsProgressFn)(void *, int, int, int);
 int ms_probe(const char *, int *, char *, size_t);
 MsSession *ms_open(const char *, char *, size_t);
 void ms_close(MsSession *);
-int ms_configure(MsSession *, const MsCarrier *, char *, size_t);
+int ms_configure(MsSession *, const MsLoadedCarrier *, char *, size_t);
 int ms_calibrate(MsSession *, MsProgressFn, void *, char *, size_t);
 int ms_scan(MsSession *, const MsRequest *, MsProgressFn, void *, char *, size_t);
 void ms_cancel(MsSession *);
@@ -295,8 +295,8 @@ class Session:
         if self._config == identity:
             return
 
-        carrier = self._ffi.new("MsCarrier *")
-        carrier.media = identity[0]
+        carrier = self._ffi.new("MsLoadedCarrier *")
+        carrier.type = identity[0]
         carrier.film = identity[1]
         carrier.format_code = identity[2]
         carrier.glassless = int(identity[3])

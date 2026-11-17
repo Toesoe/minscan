@@ -1,11 +1,11 @@
 #include "minscan/capi.h"
 
-#include "minscan/descriptor.h"
 #include "minscan/error.h"
 #include "minscan/proto.h"
 #include "minscan/session.h"
 #include "minscan/transport.h"
 #include "src/core/image/image.h"
+#include "src/core/scan/window.h"
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -20,7 +20,7 @@ struct MsSession
     struct Transport transport;
     struct Session   session;
     struct Frame     frame;
-    MsCarrier        carrier;
+    MsLoadedCarrier  carrier;
     char             device[MS_API_DEVICE_MAX];
     bool             transportOpen;
     bool             configured;
@@ -34,10 +34,10 @@ struct MsSession
 
 struct MsCalibration
 {
-    char       device[MS_API_DEVICE_MAX];
-    enum Media media;
-    bool       used;
-    bool       valid;
+    char         device[MS_API_DEVICE_MAX];
+    enum Carrier carrier;
+    bool         used;
+    bool         valid;
 };
 
 static struct MsCalibration apiCalibrations[MS_API_CAL_MAX];
@@ -61,28 +61,28 @@ static struct MsCalibration *calibrationSlot(const char *device)
     return &apiCalibrations[0];
 }
 
-static void calibrationObserve(const char *device, enum Media media)
+static void calibrationObserve(const char *device, enum Carrier media)
 {
     struct MsCalibration *pEntry = calibrationSlot(device);
 
-    if (pEntry->used && (pEntry->media != media))
+    if (pEntry->used && (pEntry->carrier != media))
     {
         // 120 <-> 35 is a different optical path; a cached ladder result is stale
         pEntry->valid = false;
     }
     snprintf(pEntry->device, sizeof pEntry->device, "%s", device);
-    pEntry->media = media;
-    pEntry->used  = true;
+    pEntry->carrier = media;
+    pEntry->used    = true;
 }
 
-static void calibrationStore(const char *device, enum Media media)
+static void calibrationStore(const char *device, enum Carrier media)
 {
     struct MsCalibration *pEntry = calibrationSlot(device);
 
     snprintf(pEntry->device, sizeof pEntry->device, "%s", device);
-    pEntry->media = media;
-    pEntry->used  = true;
-    pEntry->valid = true;
+    pEntry->carrier = media;
+    pEntry->used    = true;
+    pEntry->valid   = true;
 }
 
 static void calibrationForget(const char *device)
@@ -96,15 +96,15 @@ static bool calibrationRestore(struct Session *pSession, const char *device)
 {
     struct MsCalibration *pEntry = calibrationSlot(device);
 
-    if (!pEntry->used || !pEntry->valid || (pEntry->media != pSession->carrier.media))
+    if (!pEntry->used || !pEntry->valid || (pEntry->carrier != pSession->carrier.type))
     {
         return false;
     }
     pSession->isCalibrated    = true;
-    pSession->calibratedMedia = pEntry->media;
+    pSession->calibratedMedia = pEntry->carrier;
     pSession->carrierSwitched = false;
     minscanLog(MS_LOG_DEBUG, "calibrate: reusing cached %s result for %s",
-               pEntry->media == MS_MEDIA_35MM ? "35mm" : "120", device);
+               pEntry->carrier == MS_CARRIER_35MM ? "35mm" : "120", device);
     return true;
 }
 
@@ -121,14 +121,14 @@ static void setError(char *err, size_t errlen, const char *fmt, ...)
     va_end(ap);
 }
 
-static int carrierToInternal(const MsCarrier *pIn, struct Carrier *pOut)
+static int carrierToInternal(const MsLoadedCarrier *pIn, struct LoadedCarrier *pOut)
 {
     if ((pIn == NULL) || (pOut == NULL)) return MS_ERR_RANGE;
-    if ((pIn->media != MS_API_MEDIA_35MM) && (pIn->media != MS_API_MEDIA_120)) return MS_ERR_RANGE;
+    if ((pIn->type != MS_API_MEDIA_35MM) && (pIn->type != MS_API_MEDIA_120)) return MS_ERR_RANGE;
     if ((pIn->film < MS_API_FILM_COLOUR_NEG) || (pIn->film > MS_API_FILM_MONO)) return MS_ERR_RANGE;
 
     memset(pOut, 0, sizeof *pOut);
-    pOut->media      = (pIn->media == MS_API_MEDIA_35MM) ? MS_MEDIA_35MM : MS_MEDIA_120;
+    pOut->type       = (pIn->type == MS_API_MEDIA_35MM) ? MS_CARRIER_35MM : MS_CARRIER_120;
     pOut->film       = (enum FilmType)pIn->film;
     pOut->formatCode = (uint16_t)pIn->format_code;
     pOut->glassless  = pIn->glassless != 0;
@@ -226,12 +226,12 @@ void ms_close(MsSession *session)
     free(session);
 }
 
-int ms_configure(MsSession *session, const MsCarrier *carrier, char *err, size_t errlen)
+int ms_configure(MsSession *session, const MsLoadedCarrier *carrier, char *err, size_t errlen)
 {
     if ((err != NULL) && (errlen > 0)) err[0] = '\0';
     if ((session == NULL) || (carrier == NULL)) return MS_ERR_RANGE;
 
-    struct Carrier internal;
+    struct LoadedCarrier internal;
 
     int rc = carrierToInternal(carrier, &internal);
 
@@ -251,7 +251,7 @@ int ms_configure(MsSession *session, const MsCarrier *carrier, char *err, size_t
         return rc;
     }
 
-    calibrationObserve(session->device, internal.media);
+    calibrationObserve(session->device, internal.type);
     session->carrier    = *carrier;
     session->configured = true;
     return MS_OK;
@@ -275,7 +275,7 @@ int ms_calibrate(MsSession *session, MsProgressFn progress, void *ctx, char *err
         setError(err, errlen, "calibrate: %s", errToString(rc));
         return rc;
     }
-    calibrationStore(session->device, session->session.carrier.media);
+    calibrationStore(session->device, session->session.carrier.type);
     return MS_OK;
 }
 
@@ -298,7 +298,7 @@ int ms_scan(MsSession *session, const MsRequest *request, MsProgressFn progress,
     pS->pProgressCtx    = ctx;
     pS->cancelRequested = false;
 
-    const bool is35mm = session->carrier.media == MS_API_MEDIA_35MM;
+    const bool is35mm = session->carrier.type == MS_API_MEDIA_35MM;
     unsigned   div    = 0;
     int        rc;
     uint16_t  *pBase    = NULL;
@@ -310,7 +310,7 @@ int ms_scan(MsSession *session, const MsRequest *request, MsProgressFn progress,
     }
     else
     {
-        rc = descriptorDivisorFor(is35mm ? MS_MEDIA_35MM : MS_MEDIA_120, (unsigned)request->dpi, &div);
+        rc = divisorForDPI(is35mm ? MS_CARRIER_35MM : MS_CARRIER_120, (unsigned)request->dpi, &div);
         if (rc != MS_OK)
         {
             setError(err, errlen, "invalid dpi %d", request->dpi);
@@ -372,7 +372,7 @@ int ms_scan(MsSession *session, const MsRequest *request, MsProgressFn progress,
         }
     }
     // autofocus may have run the ladder itself; remember either path
-    if (pS->isCalibrated) calibrationStore(session->device, pS->carrier.media);
+    if (pS->isCalibrated) calibrationStore(session->device, pS->carrier.type);
 
     struct Acquisition acquisition = {
         .job        = request->prescan ? MS_JOB_PRESCAN : MS_JOB_SCAN,

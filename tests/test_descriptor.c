@@ -1,5 +1,6 @@
-#include "minscan/descriptor.h"
+#include "src/core/wire/descriptor.h"
 #include "minscan/error.h"
+#include "src/core/scan/window.h"
 #include "test.h"
 
 #include <string.h>
@@ -9,7 +10,7 @@ int main(void)
     struct Descriptor d;
 
     memset(&d, 0, sizeof d);
-    CHECK(sizeof d.raw == MS_DESC_LEN);
+    CHECK(sizeof d.raw == DESC_LEN);
 
     descriptorSetFocus(&d, -250);
     CHECK(descriptorGetFocus(&d) == -250);
@@ -39,8 +40,8 @@ int main(void)
     d.raw[0x21] = 0xff;
     CHECK(descriptorGetMode(&d) == 0xff);
 
-    const struct DescriptorFormat *fmt120 = descriptorFormatFor(MS_MEDIA_120);
-    const struct DescriptorFormat *fmt35  = descriptorFormatFor(MS_MEDIA_35MM);
+    const struct DescriptorFormat *fmt120 = defaultFormatFor(MS_CARRIER_120);
+    const struct DescriptorFormat *fmt35  = defaultFormatFor(MS_CARRIER_35MM);
     unsigned                       div    = 0;
 
     CHECK(fmt120 != NULL);
@@ -55,11 +56,11 @@ int main(void)
     CHECK(fmt35->maxDPI == 4800);
     CHECK(fmt35->rowUnitFactor == 2);
 
-    CHECK(descriptorDivisorFor(MS_MEDIA_120, 400, &div) == MS_OK);
+    CHECK(divisorForDPI(MS_CARRIER_120, 400, &div) == MS_OK);
     CHECK(div == 8);
-    CHECK(descriptorDivisorFor(MS_MEDIA_35MM, 1200, &div) == MS_OK);
+    CHECK(divisorForDPI(MS_CARRIER_35MM, 1200, &div) == MS_OK);
     CHECK(div == 4);
-    CHECK(descriptorDivisorFor(MS_MEDIA_120, 4000, &div) == MS_ERR_RANGE);
+    CHECK(divisorForDPI(MS_CARRIER_120, 4000, &div) == MS_ERR_RANGE);
 
     return 0;
 }

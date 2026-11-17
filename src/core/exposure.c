@@ -1,6 +1,5 @@
 #include "minscan/exposure.h"
 
-#include "minscan/descriptor.h"
 #include "minscan/error.h"
 
 #include <math.h>

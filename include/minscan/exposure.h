@@ -14,7 +14,7 @@
 #ifndef MINSCAN_EXPOSURE_H_
 #define MINSCAN_EXPOSURE_H_
 
-#include "minscan/descriptor.h"
+#include "src/core/scan/request.h"
 
 #include <stdint.h>
 

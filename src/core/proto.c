@@ -1,6 +1,6 @@
 #include "minscan/proto.h"
 
-#include "minscan/descriptor.h"
+#include "src/core/wire/descriptor.h"
 #include "minscan/error.h"
 
 #include <string.h>

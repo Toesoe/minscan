@@ -1,11 +1,11 @@
 #include "argtable3.h"
-#include "minscan/descriptor.h"
 #include "minscan/error.h"
 #include "minscan/proto.h"
 #include "minscan/session.h"
 #include "minscan/time.h"
 #include "minscan/transport.h"
 #include "src/core/image/image.h"
+#include "src/core/scan/window.h"
 #include "src/core/tiff.h"
 
 #include <limits.h>
@@ -106,36 +106,36 @@ static void focusLog(void *pCtx, const char *szTag, int16_t focus, double metric
     printf("focus: %-6s %+4d  %10.0f\n", szTag, focus, metric);
 }
 
-static int parseSize(const char *szSize, enum Media *pMediaOut, uint16_t *pFormatCodeOut, bool *pIs35mmOut)
+static int parseSize(const char *szSize, enum Carrier *pMediaOut, uint16_t *pFormatCodeOut, bool *pIs35mmOut)
 {
     if (strcmp(szSize, "35mm") == 0)
     {
-        *pMediaOut      = MS_MEDIA_35MM;
+        *pMediaOut      = MS_CARRIER_35MM;
         *pFormatCodeOut = 1;
     }
     else if (strcmp(szSize, "6x9") == 0)
     {
-        *pMediaOut      = MS_MEDIA_120;
+        *pMediaOut      = MS_CARRIER_120;
         *pFormatCodeOut = 0x20;
     }
     else if (strcmp(szSize, "6x8") == 0)
     {
-        *pMediaOut      = MS_MEDIA_120;
+        *pMediaOut      = MS_CARRIER_120;
         *pFormatCodeOut = 0x10;
     }
     else if (strcmp(szSize, "6x7") == 0)
     {
-        *pMediaOut      = MS_MEDIA_120;
+        *pMediaOut      = MS_CARRIER_120;
         *pFormatCodeOut = 8;
     }
     else if (strcmp(szSize, "6x6") == 0)
     {
-        *pMediaOut      = MS_MEDIA_120;
+        *pMediaOut      = MS_CARRIER_120;
         *pFormatCodeOut = 4;
     }
     else if (strcmp(szSize, "6x45") == 0)
     {
-        *pMediaOut      = MS_MEDIA_120;
+        *pMediaOut      = MS_CARRIER_120;
         *pFormatCodeOut = 2;
     }
     else
@@ -143,7 +143,7 @@ static int parseSize(const char *szSize, enum Media *pMediaOut, uint16_t *pForma
         return MS_ERR_RANGE;
     }
 
-    *pIs35mmOut = (*pMediaOut == MS_MEDIA_35MM);
+    *pIs35mmOut = (*pMediaOut == MS_CARRIER_35MM);
     return MS_OK;
 }
 
@@ -261,7 +261,7 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
     // carrier/scan shape first; nothing below this point may touch the device
     // unless every value is in range
 
-    enum Media    media;
+    enum Carrier  media;
     uint16_t      formatCode = 0;
     bool          is35mm;
     enum FilmType film;
@@ -311,12 +311,12 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
         return 1;
     }
 
-    struct Carrier carrier = {
-        .media      = media,
-        .film       = film,
-        .formatCode = formatCode,
-        .glassless  = glassless->count != 0,
-        .ev         = evVal,
+    struct LoadedCarrier carrier = {
+        .carrierType = media,
+        .film        = film,
+        .formatCode  = formatCode,
+        .glassless   = glassless->count != 0,
+        .ev          = evVal,
     };
 
     struct Acquisition acquisition = {0};
@@ -341,7 +341,7 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
             arg_freetable(argtable, sizeof argtable / sizeof argtable[0]);
             return 1;
         }
-        if (descriptorDivisorFor(carrier.media, (unsigned)dpi->ival[0], &div) != MS_OK)
+        if (divisorForDPI(carrier.type, (unsigned)dpi->ival[0], &div) != MS_OK)
         {
             minscanLog(MS_LOG_ERROR, "scan: dpi %d is not a valid %s stage divisor", dpi->ival[0],
                        is35mm ? "35mm" : "120");
@@ -584,7 +584,7 @@ static int cmd_focus(int argc, char **argv, arg_dstr_t res, void *ctx)
         return exitcode;
     }
 
-    enum Media    media;
+    enum Carrier  media;
     uint16_t      formatCode = 0;
     bool          is35mm;
     enum FilmType film;
@@ -628,7 +628,7 @@ static int cmd_focus(int argc, char **argv, arg_dstr_t res, void *ctx)
         return 1;
     }
 
-    struct Carrier carrier = {
+    struct LoadedCarrier carrier = {
         .media      = media,
         .film       = film,
         .formatCode = formatCode,

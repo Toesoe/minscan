@@ -1,11 +1,13 @@
 #include "minscan/session.h"
 
-#include "minscan/descriptor.h"
 #include "minscan/error.h"
 #include "minscan/proto.h"
 #include "minscan/time.h"
 #include "minscan/transport.h"
 #include "src/core/image/image.h"
+#include "src/core/scan/window.h"
+#include "scan/job.h"
+#include "wire/descriptor.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -152,7 +154,7 @@ static void parseSat(const uint8_t buf[8], struct Sat *pSat)
 }
 
 // the only lens stages the stepper is allowed to see
-static int carrierStageDPI(enum Media media, uint16_t *pDPIOut)
+static int carrierStageDPI(enum Carrier media, uint16_t *pDPIOut)
 {
     if (pDPIOut == NULL)
     {
@@ -160,10 +162,10 @@ static int carrierStageDPI(enum Media media, uint16_t *pDPIOut)
     }
     switch (media)
     {
-        case MS_MEDIA_35MM:
+        case MS_CARRIER_35MM:
             *pDPIOut = MS_MAX_DPI_35MM;
             return MS_OK;
-        case MS_MEDIA_120:
+        case MS_CARRIER_120:
             *pDPIOut = MS_MAX_DPI_120;
             return MS_OK;
         default:
@@ -172,7 +174,7 @@ static int carrierStageDPI(enum Media media, uint16_t *pDPIOut)
 }
 
 // page 0x24 selects at most 3 two-frame groups on 35 mm and one on 120
-static int carrierMaxFrameGroup(enum Media media, unsigned *pMaxOut)
+static int carrierMaxFrameGroup(enum Carrier media, unsigned *pMaxOut)
 {
     if (pMaxOut == NULL)
     {
@@ -180,10 +182,10 @@ static int carrierMaxFrameGroup(enum Media media, unsigned *pMaxOut)
     }
     switch (media)
     {
-        case MS_MEDIA_35MM:
+        case MS_CARRIER_35MM:
             *pMaxOut = MS_MAX_FRAME_GROUP_35;
             return MS_OK;
-        case MS_MEDIA_120:
+        case MS_CARRIER_120:
             *pMaxOut = MS_MAX_FRAME_GROUP_120;
             return MS_OK;
         default:
@@ -191,7 +193,7 @@ static int carrierMaxFrameGroup(enum Media media, unsigned *pMaxOut)
     }
 }
 
-static int mediaForCode(uint8_t code, enum Media *pMediaOut)
+static int mediaForCode(uint8_t code, enum Carrier *pMediaOut)
 {
     if (pMediaOut == NULL)
     {
@@ -200,10 +202,10 @@ static int mediaForCode(uint8_t code, enum Media *pMediaOut)
     switch (code)
     {
         case MS_MEDIA_CODE_35MM:
-            *pMediaOut = MS_MEDIA_35MM;
+            *pMediaOut = MS_CARRIER_35MM;
             return MS_OK;
         case MS_MEDIA_CODE_120:
-            *pMediaOut = MS_MEDIA_120;
+            *pMediaOut = MS_CARRIER_120;
             return MS_OK;
         default:
             return MS_ERR_RANGE; // 0x0f (none) and unknown codes are not usable
@@ -217,12 +219,12 @@ static int writeDescriptor(struct Session *pSession, const struct Descriptor *pD
     size_t                 cdbLen;
     int                    rc;
 
-    cdbLen = protoCDBWrite(MS_DESC_LEN, cdb);
+    cdbLen = protoCDBWrite(DESC_LEN, cdb);
     if (cdbLen == 0)
     {
         return MS_ERR_RANGE;
     }
-    rc = sessionExec(pSession, cdb, cdbLen, MS_DIR_OUT, (uint8_t *)pDescriptor->raw, MS_DESC_LEN,
+    rc = sessionExec(pSession, cdb, cdbLen, MS_DIR_OUT, (uint8_t *)pDescriptor->raw, DESC_LEN,
                      MS_DESC_WRITE_TIMEOUT_MS, &res);
     if (rc != MS_OK)
     {
@@ -352,7 +354,7 @@ int sessionReadPages(struct Session *pSession)
     return MS_OK;
 }
 
-int sessionInit(struct Session *pSession, struct Transport *pTransport, struct Carrier *pCarrier)
+int sessionInit(struct Session *pSession, struct Transport *pTransport, struct LoadedCarrier *pCarrier)
 {
     int rc;
 
@@ -360,7 +362,7 @@ int sessionInit(struct Session *pSession, struct Transport *pTransport, struct C
     {
         return MS_ERR_RANGE;
     }
-    if (((int)pCarrier->media < (int)MS_MEDIA_35MM) || ((int)pCarrier->media > (int)MS_MEDIA_120))
+    if (((int)pCarrier->type < (int)MS_CARRIER_35MM) || ((int)pCarrier->type > (int)MS_CARRIER_120))
     {
         return MS_ERR_RANGE;
     }
@@ -377,22 +379,22 @@ int sessionInit(struct Session *pSession, struct Transport *pTransport, struct C
 
     if (pSession->carrier.formatCode != 0)
     {
-        pFormat = descriptorFormatByCode(pSession->carrier.formatCode);
+        pFormat = formatByCode(pSession->carrier.formatCode);
     }
     else
     {
-        pFormat = descriptorFormatFor(pSession->carrier.media);
+        pFormat = defaultFormatFor(pSession->carrier.type);
     }
     if (pFormat == NULL)
     {
         minscanLog(MS_LOG_ERROR, "init: unknown format code 0x%02x", (unsigned)pSession->carrier.formatCode);
         return MS_ERR_RANGE;
     }
-    if (((pSession->carrier.media == MS_MEDIA_35MM) && (pFormat->maxDPI != MS_MAX_DPI_35MM)) ||
-        ((pSession->carrier.media == MS_MEDIA_120) && (pFormat->maxDPI != MS_MAX_DPI_120)))
+    if (((pSession->carrier.type == MS_CARRIER_35MM) && (pFormat->maxDPI != MS_MAX_DPI_35MM)) ||
+        ((pSession->carrier.type == MS_CARRIER_120) && (pFormat->maxDPI != MS_MAX_DPI_120)))
     {
         minscanLog(MS_LOG_ERROR, "init: format 0x%02x is not a %s preset", (unsigned)pFormat->codes[0],
-                   pSession->carrier.media == MS_MEDIA_35MM ? "35mm" : "120");
+                   pSession->carrier.type == MS_CARRIER_35MM ? "35mm" : "120");
         return MS_ERR_RANGE;
     }
 
@@ -410,18 +412,18 @@ int sessionInit(struct Session *pSession, struct Transport *pTransport, struct C
         return rc;
     }
 
-    enum Media observed;
+    enum Carrier observed;
 
     if (mediaForCode(pSession->page24.media, &observed) != MS_OK)
     {
         minscanLog(MS_LOG_ERROR, "init: no usable carrier (page 0x24 media 0x%02x)", (unsigned)pSession->page24.media);
         return MS_ERR_NOT_READY;
     }
-    if (observed != pSession->carrier.media)
+    if (observed != pSession->carrier.type)
     {
         minscanLog(MS_LOG_ERROR, "init: requested %s but page 0x24 reports %s (0x%02x)",
-                   pSession->carrier.media == MS_MEDIA_35MM ? "35mm" : "120",
-                   observed == MS_MEDIA_35MM ? "35mm" : "120", (unsigned)pSession->page24.media);
+                   pSession->carrier.type == MS_CARRIER_35MM ? "35mm" : "120",
+                   observed == MS_CARRIER_35MM ? "35mm" : "120", (unsigned)pSession->page24.media);
         return MS_ERR_RANGE;
     }
 
@@ -559,17 +561,17 @@ int sessionReadSat(struct Session *pSession)
     return MS_OK;
 }
 
-const struct Sat *sessionSatFor(const struct Session *pSession, enum Media media)
+const struct Sat *sessionSatFor(const struct Session *pSession, enum Carrier media)
 {
     if (!pSession)
     {
         return nullptr;
     }
-    if (media == MS_MEDIA_35MM)
+    if (media == MS_CARRIER_35MM)
     {
         return &pSession->sat35;
     }
-    if (media == MS_MEDIA_120)
+    if (media == MS_CARRIER_120)
     {
         return &pSession->sat120;
     }
@@ -589,7 +591,7 @@ int sessionCalibrate(struct Session *pSession)
     // each state; sending them back-to-back leaves the device mid-move and the next state is lost
     pSession->isCalibrated = false;
 
-    const uint8_t first = (pSession->carrier.media == MS_MEDIA_35MM) ? 0x06 : 0x03;
+    const uint8_t first = (pSession->carrier.type == MS_CARRIER_35MM) ? 0x06 : 0x03;
     int           step  = 0;
 
     for (uint8_t state = first; state < (uint8_t)(first + 3u); state++)
@@ -640,7 +642,7 @@ int sessionCalibrate(struct Session *pSession)
     if (rc == MS_OK)
     {
         pSession->isCalibrated    = true;
-        pSession->calibratedMedia = pSession->carrier.media;
+        pSession->calibratedMedia = pSession->carrier.type;
         pSession->carrierSwitched = false;
     }
 
@@ -700,7 +702,7 @@ static bool sessionSatIsZero(const struct Sat *pSat)
 static int sessionDeriveExposure(const struct Session *pSession, const struct Acquisition *pAcquisition, bool prescan,
                                  struct Exposure *pOut)
 {
-    const struct Sat *pSat = sessionSatFor(pSession, pSession->carrier.media);
+    const struct Sat *pSat = sessionSatFor(pSession, pSession->carrier.type);
     bool              isGlass;
     double            ev;
 
@@ -710,7 +712,7 @@ static int sessionDeriveExposure(const struct Session *pSession, const struct Ac
     }
 
     // the vendor gate: 120 glass insert, or the 35 mm multi-format holder
-    if (pSession->carrier.media == MS_MEDIA_120)
+    if (pSession->carrier.type == MS_CARRIER_120)
     {
         isGlass = !pSession->carrier.glassless;
     }
@@ -733,7 +735,7 @@ static int sessionBuildJobExposure(const struct Session *pSession, const struct 
     int16_t focus = (pAcquisition->focus != 0) ? pAcquisition->focus : pSession->focus;
 
     struct DescriptorParameters params = {
-        .media      = pSession->carrier.media,
+        .carrier    = pSession->carrier.type,
         .job        = job,
         .film       = pSession->carrier.film,
         .formatCode = pSession->carrier.formatCode,
@@ -752,7 +754,7 @@ static int sessionBuildFocusBase(const struct Session *pSession, enum Job job, c
                                  struct Descriptor *pDescriptorOut)
 {
     struct DescriptorParameters params = {
-        .media      = pSession->carrier.media,
+        .carrier    = pSession->carrier.type,
         .job        = job,
         .film       = pSession->carrier.film,
         .formatCode = pSession->carrier.formatCode,
@@ -767,18 +769,18 @@ static int sessionBuildFocusBase(const struct Session *pSession, enum Job job, c
     return descriptorBuild(&params, pDescriptorOut);
 }
 
-static struct Exposure focusExposureFor(enum Media media)
+static struct Exposure focusExposureFor(enum Carrier media)
 {
-    if (media == MS_MEDIA_35MM)
+    if (media == MS_CARRIER_35MM)
     {
         return (struct Exposure){.red = 4095, .green = 4095, .blue = 4095, .ir = 0};
     }
     return (struct Exposure){.red = 914, .green = 831, .blue = 652, .ir = 0};
 }
 
-static struct Exposure focusOpenExposureFor(enum Media media)
+static struct Exposure focusOpenExposureFor(enum Carrier media)
 {
-    if (media == MS_MEDIA_35MM)
+    if (media == MS_CARRIER_35MM)
     {
         return (struct Exposure){.red = 640, .green = 640, .blue = 640, .ir = 0};
     }
@@ -973,7 +975,7 @@ static int burstPlanFor(const struct Descriptor *pJob, const struct Acquisition 
         return MS_ERR_RANGE;
     }
 
-    colour = (descriptorGetMode(pJob) == MS_DESC_MODE_COLOUR);
+    colour = (descriptorGetMode(pJob) == DESC_MODE_COLOUR);
     planes = 1;
     if (colour)
     {
@@ -1196,7 +1198,7 @@ static int validateAcquisition(const struct Session *pSession, const struct Acqu
     {
         return MS_ERR_RANGE;
     }
-    if (carrierMaxFrameGroup(pSession->carrier.media, &maxGroup) != MS_OK)
+    if (carrierMaxFrameGroup(pSession->carrier.type, &maxGroup) != MS_OK)
     {
         return MS_ERR_RANGE;
     }
@@ -1240,7 +1242,7 @@ int sessionSetLensStage(struct Session *pSession)
         return MS_ERR_UNINITIALIZED;
     }
 
-    rc = carrierStageDPI(pSession->carrier.media, &want);
+    rc = carrierStageDPI(pSession->carrier.type, &want);
     if (rc != MS_OK)
     {
         return rc;
@@ -1301,7 +1303,7 @@ int sessionSetFrameGroup(struct Session *pSession, unsigned group)
         return MS_ERR_UNINITIALIZED;
     }
 
-    rc = carrierMaxFrameGroup(pSession->carrier.media, &maxGroup);
+    rc = carrierMaxFrameGroup(pSession->carrier.type, &maxGroup);
     if (rc != MS_OK)
     {
         return rc;
@@ -1319,9 +1321,9 @@ int sessionSetFrameGroup(struct Session *pSession, unsigned group)
         return MS_ERR_PROTO;
     }
 
-    enum Media observed;
+    enum Carrier observed;
 
-    if (mediaForCode(pSession->page24.media, &observed) != MS_OK || observed != pSession->carrier.media)
+    if (mediaForCode(pSession->page24.media, &observed) != MS_OK || observed != pSession->carrier.type)
     {
         minscanLog(MS_LOG_ERROR, "frame: page 0x24 media 0x%02x does not match the configured carrier",
                    (unsigned)pSession->page24.media);
@@ -1356,7 +1358,7 @@ int sessionSetFrameGroup(struct Session *pSession, unsigned group)
         minscanLog(MS_LOG_ERROR, "frame: readback group %u, want %u", pSession->page24.frameGroup, group);
         return MS_ERR_PROTO;
     }
-    if (mediaForCode(pSession->page24.media, &observed) != MS_OK || observed != pSession->carrier.media)
+    if (mediaForCode(pSession->page24.media, &observed) != MS_OK || observed != pSession->carrier.type)
     {
         return MS_ERR_PROTO;
     }
@@ -1386,18 +1388,18 @@ int sessionCheckCarrier(struct Session *pSession)
         return MS_ERR_PROTO;
     }
 
-    enum Media observed;
+    enum Carrier observed;
 
     if (mediaForCode(pSession->page24.media, &observed) != MS_OK)
     {
         return MS_OK; // no carrier / unknown: keep state; eject+reinsert same is fine
     }
 
-    if (observed != pSession->carrier.media)
+    if (observed != pSession->carrier.type)
     {
         minscanLog(MS_LOG_WARN, "carrier: device reports %s but session is configured for %s",
-                   observed == MS_MEDIA_35MM ? "35mm" : "120",
-                   pSession->carrier.media == MS_MEDIA_35MM ? "35mm" : "120");
+                   observed == MS_CARRIER_35MM ? "35mm" : "120",
+                   pSession->carrier.type == MS_CARRIER_35MM ? "35mm" : "120");
     }
 
     if (observed != pSession->calibratedMedia)
@@ -1405,8 +1407,8 @@ int sessionCheckCarrier(struct Session *pSession)
         if (pSession->isCalibrated)
         {
             minscanLog(MS_LOG_INFO, "carrier: %s -> %s; calibration invalidated",
-                       pSession->calibratedMedia == MS_MEDIA_35MM ? "35mm" : "120",
-                       observed == MS_MEDIA_35MM ? "35mm" : "120");
+                       pSession->calibratedMedia == MS_CARRIER_35MM ? "35mm" : "120",
+                       observed == MS_CARRIER_35MM ? "35mm" : "120");
         }
         pSession->isCalibrated    = false;
         pSession->carrierSwitched = true;
@@ -1455,7 +1457,7 @@ int sessionAcquire(struct Session *pSession, const struct Acquisition *pAcquisit
         }
     }
 
-    if (sessionSatIsZero(sessionSatFor(pSession, pSession->carrier.media)))
+    if (sessionSatIsZero(sessionSatFor(pSession, pSession->carrier.type)))
     {
         rc = sessionReadSat(pSession);
         if (rc != MS_OK)
@@ -1576,7 +1578,7 @@ int sessionAutofocus(struct Session *pSession, unsigned frame, int16_t *pOutFocu
     {
         return MS_ERR_RANGE;
     }
-    if ((carrierMaxFrameGroup(pSession->carrier.media, &maxGroup) != MS_OK) || (frame > maxGroup))
+    if ((carrierMaxFrameGroup(pSession->carrier.type, &maxGroup) != MS_OK) || (frame > maxGroup))
     {
         return MS_ERR_RANGE;
     }
@@ -1601,7 +1603,7 @@ int sessionAutofocus(struct Session *pSession, unsigned frame, int16_t *pOutFocu
             return rc;
         }
     }
-    if (sessionSatIsZero(sessionSatFor(pSession, pSession->carrier.media)))
+    if (sessionSatIsZero(sessionSatFor(pSession, pSession->carrier.type)))
     {
         rc = sessionReadSat(pSession);
         if (rc != MS_OK)
@@ -1657,8 +1659,8 @@ int sessionAutofocus(struct Session *pSession, unsigned frame, int16_t *pOutFocu
         s1 = MS_FOCUS_SWEEP_LO;
     }
 
-    focusExp = focusExposureFor(pSession->carrier.media);
-    openExp  = focusOpenExposureFor(pSession->carrier.media);
+    focusExp = focusExposureFor(pSession->carrier.type);
+    openExp  = focusOpenExposureFor(pSession->carrier.type);
 
     rc = sessionBuildFocusBase(pSession, MS_JOB_FOCUS, &focusExp, &focusBase);
     if (rc != MS_OK)
@@ -1860,7 +1862,7 @@ int sessionMeasureFocus(struct Session *pSession, int16_t focus, double *pOutMet
         return MS_ERR_RANGE;
     }
 
-    exposure = focusExposureFor(pSession->carrier.media);
+    exposure = focusExposureFor(pSession->carrier.type);
     rc       = sessionBuildFocusBase(pSession, MS_JOB_FOCUS, &exposure, &base);
     if (rc != MS_OK)
     {
