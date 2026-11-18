@@ -49,7 +49,7 @@ int main(void)
     CHECK(tiffWrite(path, &frame, 1.0, false, false) == MS_OK);
 
     TIFF *pIn = TIFFOpen(path, "r");
-    CHECK(pIn != NULL);
+    CHECK(pIn != nullptr);
 
     uint32_t width = 0, height = 0;
     CHECK(TIFFGetField(pIn, TIFFTAG_IMAGEWIDTH, &width) == 1);
@@ -58,7 +58,7 @@ int main(void)
     CHECK(height == (uint32_t)rows);
 
     uint16_t *pRow = malloc((size_t)TIFFScanlineSize(pIn));
-    CHECK(pRow != NULL);
+    CHECK(pRow != nullptr);
 
     for (uint32_t y = 0; y < height; y++)
     {
@@ -101,7 +101,7 @@ int main(void)
     CHECK(access(irPath, F_OK) != 0);
 
     TIFF *pRgb = TIFFOpen(path, "r");
-    CHECK(pRgb != NULL);
+    CHECK(pRgb != nullptr);
     uint16_t samples = 0;
     CHECK(TIFFGetField(pRgb, TIFFTAG_SAMPLESPERPIXEL, &samples) == 1);
     CHECK(samples == 3);
@@ -116,7 +116,7 @@ int main(void)
     CHECK(access(irPath, F_OK) != 0);
 
     pRgb = TIFFOpen(path, "r");
-    CHECK(pRgb != NULL);
+    CHECK(pRgb != nullptr);
     CHECK(TIFFGetField(pRgb, TIFFTAG_SAMPLESPERPIXEL, &samples) == 1);
     CHECK(samples == 4);
     TIFFClose(pRgb);
@@ -127,7 +127,7 @@ int main(void)
     unlink(irPath);
 
     pRgb = TIFFOpen(path, "r");
-    CHECK(pRgb != NULL);
+    CHECK(pRgb != nullptr);
     CHECK(TIFFGetField(pRgb, TIFFTAG_SAMPLESPERPIXEL, &samples) == 1);
     CHECK(samples == 4);
     TIFFClose(pRgb);

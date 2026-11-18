@@ -17,17 +17,17 @@ int transportOpen(struct Transport *pTransport, const char *szPath)
 {
     const struct TransportOps *ops;
 
-    if (pTransport == NULL || szPath == NULL)
+    if (pTransport == nullptr || szPath == nullptr)
     {
         return MS_ERR_RANGE;
     }
     ops = transportGetOps();
-    if (ops == NULL || ops->open == NULL)
+    if (ops == nullptr || ops->open == nullptr)
     {
         return MS_ERR_UNSUPPORTED;
     }
     pTransport->pOps = ops;
-    pTransport->pCtx = NULL;
+    pTransport->pCtx = nullptr;
     return ops->open(pTransport, szPath);
 }
 
@@ -35,8 +35,8 @@ int transportExec(const struct Transport *pTransport, const uint8_t *pCdb, const
                   enum TransportDirection dir, uint8_t *pBuf, size_t bufLen, unsigned timeoutMs,
                   struct TransportResult *pRes)
 {
-    if (pTransport == NULL || pTransport->pOps == NULL || pTransport->pOps->exec == NULL || pCdb == NULL ||
-        pRes == NULL)
+    if (pTransport == nullptr || pTransport->pOps == nullptr || pTransport->pOps->exec == nullptr || pCdb == nullptr ||
+        pRes == nullptr)
     {
         return MS_ERR_RANGE;
     }
@@ -45,14 +45,14 @@ int transportExec(const struct Transport *pTransport, const uint8_t *pCdb, const
 
 void transportClose(struct Transport *pTransport)
 {
-    if (pTransport == NULL)
+    if (pTransport == nullptr)
     {
         return;
     }
-    if (pTransport->pOps != NULL && pTransport->pOps->close != NULL)
+    if (pTransport->pOps != nullptr && pTransport->pOps->close != nullptr)
     {
         pTransport->pOps->close(pTransport);
     }
-    pTransport->pOps = NULL;
-    pTransport->pCtx = NULL;
+    pTransport->pOps = nullptr;
+    pTransport->pCtx = nullptr;
 }

@@ -22,7 +22,7 @@ int timeDeadlineAfter(unsigned ms, struct TimeDeadline *pOutDeadline)
 {
     struct timespec now;
 
-    if (pOutDeadline == NULL)
+    if (pOutDeadline == nullptr)
     {
         return MS_ERR_RANGE;
     }
@@ -53,7 +53,7 @@ int timeSleepUntil(const struct TimeDeadline *pDeadline)
     struct timespec deadline;
     int             rc;
 
-    if (pDeadline == NULL || pDeadline->time_nanosec >= 1000000000u)
+    if (pDeadline == nullptr || pDeadline->time_nanosec >= 1000000000u)
     {
         return MS_ERR_RANGE;
     }
@@ -63,7 +63,7 @@ int timeSleepUntil(const struct TimeDeadline *pDeadline)
 
     do
     {
-        rc = clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &deadline, NULL);
+        rc = clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &deadline, nullptr);
     } while (rc == EINTR);
 
     if (rc == 0)
@@ -83,7 +83,7 @@ bool timeIsDeadlineExpired(const struct TimeDeadline *pDeadline)
     uint64_t        sec;
     uint64_t        nsec;
 
-    if (pDeadline == NULL)
+    if (pDeadline == nullptr)
     {
         return true;
     }

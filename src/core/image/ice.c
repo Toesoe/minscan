@@ -1072,7 +1072,7 @@ static bool iceClean(struct Frame *pFrame, const struct IceCalibration *pCal, co
 
 int imageICEApply(struct Frame *pFrame, unsigned dpi)
 {
-    if ((pFrame == NULL) || (pFrame->ppPlanes == NULL) || (pFrame->rows <= 0) || (pFrame->cols <= 0) ||
+    if ((pFrame == nullptr) || (pFrame->ppPlanes == nullptr) || (pFrame->rows <= 0) || (pFrame->cols <= 0) ||
         (pFrame->rowStride < (size_t)pFrame->cols * sizeof(uint16_t)))
     {
         return MS_ERR_RANGE;
@@ -1083,7 +1083,7 @@ int imageICEApply(struct Frame *pFrame, unsigned dpi)
     }
     for (int plane = 0; plane < 4; plane++)
     {
-        if (pFrame->ppPlanes[plane] == NULL)
+        if (pFrame->ppPlanes[plane] == nullptr)
         {
             return MS_ERR_RANGE;
         }

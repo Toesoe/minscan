@@ -35,7 +35,7 @@ static void frameLoad(struct Frame *pFrame, uint16_t *const pPlanes[4])
 {
     for (int c = 0; c < 4; c++)
     {
-        if (pPlanes[c] == NULL)
+        if (pPlanes[c] == nullptr)
         {
             continue;
         }
@@ -87,7 +87,7 @@ int main(int argc, char **argv)
     {
         truth[c]  = malloc(n * sizeof(uint16_t));
         planes[c] = malloc(n * sizeof(uint16_t));
-        if ((truth[c] == NULL) || (planes[c] == NULL))
+        if ((truth[c] == nullptr) || (planes[c] == nullptr))
         {
             fprintf(stderr, "out of memory\n");
             return 2;
@@ -95,7 +95,7 @@ int main(int argc, char **argv)
     }
     dirty = malloc(n * sizeof(uint16_t));
     ir    = malloc(n * sizeof(uint16_t));
-    if ((dirty == NULL) || (ir == NULL))
+    if ((dirty == nullptr) || (ir == nullptr))
     {
         fprintf(stderr, "out of memory\n");
         return 2;
@@ -145,7 +145,7 @@ int main(int argc, char **argv)
     // while still exercising the product profile
     const unsigned dpi = 400;
 
-    CHECK(imageICEApply(NULL, dpi) == MS_ERR_RANGE);
+    CHECK(imageICEApply(nullptr, dpi) == MS_ERR_RANGE);
 
     struct Frame mono = {0};
     CHECK(imageFrameAlloc(&mono, 2, 4, 3) == MS_OK);
@@ -198,14 +198,14 @@ int main(int argc, char **argv)
     for (int c = 0; c < 3; c++)
     {
         q[c] = malloc(n * sizeof(uint16_t));
-        if (q[c] == NULL)
+        if (q[c] == nullptr)
         {
             fprintf(stderr, "out of memory\n");
             return 2;
         }
     }
     qir = malloc(n * sizeof(uint16_t));
-    if (qir == NULL)
+    if (qir == nullptr)
     {
         fprintf(stderr, "out of memory\n");
         return 2;
@@ -248,7 +248,7 @@ int main(int argc, char **argv)
 
     // 1. the hole itself is selected (dark, but the veto skips rows +-4)
     uint16_t *qbase = malloc(n * sizeof(uint16_t));
-    if (qbase == NULL)
+    if (qbase == nullptr)
     {
         fprintf(stderr, "out of memory\n");
         return 2;
@@ -362,7 +362,7 @@ int main(int argc, char **argv)
     if (argc > 1)
     {
         FILE *pOut = fopen(argv[1], "wb");
-        if (pOut == NULL)
+        if (pOut == nullptr)
         {
             perror(argv[1]);
             return 2;

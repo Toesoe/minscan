@@ -24,11 +24,11 @@ int main(void)
     CHECK(f.rowStride >= 1782u); // cols * 2, per plane
     CHECK(f.rowStride == 1792u); // 1782 padded to 64
     CHECK(f.rowStride % 64u == 0);
-    CHECK(f.ppPlanes != NULL);
+    CHECK(f.ppPlanes != nullptr);
 
     for (i = 0; i < 3; i++)
     {
-        CHECK(f.ppPlanes[i] != NULL);
+        CHECK(f.ppPlanes[i] != nullptr);
         CHECK(((uintptr_t)f.ppPlanes[i] % 64u) == 0);
         uint8_t *plane = (uint8_t *)f.ppPlanes[i];
         for (size_t j = 0; j < f.rowStride * (size_t)f.rows; j++)
@@ -42,7 +42,7 @@ int main(void)
     }
 
     imageFrameFreePlanes(&f);
-    CHECK(f.ppPlanes == NULL);
+    CHECK(f.ppPlanes == nullptr);
     CHECK(f.numPlanes == 0);
     CHECK(f.rows == 0);
     CHECK(f.rowStride == 0);

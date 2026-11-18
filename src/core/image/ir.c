@@ -104,7 +104,8 @@ int imageNormalizeIR(struct Frame *pFrame)
     const int clamped = imageClampGain(colGain, pFrame->cols);
     if (clamped > 0)
     {
-        minscanLog(MS_LOG_WARN, "imgIR: %d column gains clamped to [%.2f, %.2f]", clamped, IMAGE_GAIN_MIN, IMAGE_GAIN_MAX);
+        minscanLog(MS_LOG_WARN, "imgIR: %d column gains clamped to [%.2f, %.2f]", clamped, IMAGE_GAIN_MIN,
+                   IMAGE_GAIN_MAX);
     }
 
     // per-pixel correction with final gain value; clip, saturate and round

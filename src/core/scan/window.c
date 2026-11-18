@@ -11,8 +11,8 @@
 
 #include "window.h"
 
-#include "src/core/wire/descriptor.h"
 #include "minscan/error.h"
+#include "src/core/wire/descriptor.h"
 
 #include <math.h>
 #include <stddef.h>
@@ -221,7 +221,7 @@ const struct DescriptorFormat *scanFormatByCode(uint16_t code)
             }
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 const struct DescriptorFormat *scanDefaultFormatFor(enum Carrier carrier)
@@ -233,7 +233,7 @@ const struct DescriptorFormat *scanDefaultFormatFor(enum Carrier carrier)
         case MS_CARRIER_120:
             return scanFormatByCode(0x20);
     }
-    return NULL;
+    return nullptr;
 }
 
 int scanDivisorForDPI(enum Carrier carrier, unsigned dpi, unsigned *pDiv)
@@ -241,12 +241,12 @@ int scanDivisorForDPI(enum Carrier carrier, unsigned dpi, unsigned *pDiv)
     const struct DescriptorFormat *pFormat;
     unsigned                       div;
 
-    if (pDiv == NULL || dpi == 0)
+    if (pDiv == nullptr || dpi == 0)
     {
         return MS_ERR_RANGE;
     }
     pFormat = scanDefaultFormatFor(carrier);
-    if (pFormat == NULL || pFormat->maxDPI % dpi != 0)
+    if (pFormat == nullptr || pFormat->maxDPI % dpi != 0)
     {
         return MS_ERR_RANGE;
     }
@@ -267,14 +267,14 @@ int scanDivisorForDPI(enum Carrier carrier, unsigned dpi, unsigned *pDiv)
 
 int scanResolveWindow(const struct DescriptorParameters *pParams, struct Window *pOut)
 {
-    if ((pParams == NULL) || (pOut == NULL) || (pParams->div == 0))
+    if ((pParams == nullptr) || (pOut == nullptr) || (pParams->div == 0))
     {
         return MS_ERR_RANGE;
     }
 
     const struct DescriptorFormat *pFormat = (pParams->formatCode != 0) ? scanFormatByCode(pParams->formatCode) :
                                                                           scanDefaultFormatFor(pParams->carrier);
-    if (pFormat == NULL)
+    if (pFormat == nullptr)
     {
         return MS_ERR_RANGE;
     }

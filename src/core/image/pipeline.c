@@ -12,7 +12,6 @@
  */
 
 #include "image.h"
-
 #include "minscan/error.h"
 
 // the 4-plane readout carries a CCD-edge gain gradient that the 3-plane readout does not
@@ -20,7 +19,7 @@ static const double baseStrength[3] = {0.103, 0.103, 0.091};
 
 int imagePostprocess(struct Frame *pFrame, const struct ImagePostParams *pParams)
 {
-    if ((pFrame == NULL) || (pParams == NULL))
+    if ((pFrame == nullptr) || (pParams == nullptr))
     {
         return MS_ERR_RANGE;
     }
@@ -35,7 +34,7 @@ int imagePostprocess(struct Frame *pFrame, const struct ImagePostParams *pParams
     {
         // flatten RGB against the raw IR column profile before ICE; the 3-plane
         // path is already flat and must stay untouched
-        if (pParams->pBase != NULL)
+        if (pParams->pBase != nullptr)
         {
             rc = imageBaseGain(pFrame, pParams->pBase, pParams->baseCols, baseStrength);
             if (rc != MS_OK)

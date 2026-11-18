@@ -60,8 +60,8 @@ struct TransportOps
 /** @brief caller-owned transport handle */
 struct Transport
 {
-    const struct TransportOps *pOps; ///< backend vtable; NULL on a closed handle
-    void                      *pCtx; ///< backend-private state; NULL if unopened/closed
+    const struct TransportOps *pOps; ///< backend vtable; nullptr on a closed handle
+    void                      *pCtx; ///< backend-private state; nullptr if unopened/closed
 };
 
 // implemented by the selected backend

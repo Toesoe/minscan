@@ -1,11 +1,11 @@
 #include "argtable3.h"
 #include "minscan/error.h"
 #include "minscan/proto.h"
-#include "src/core/session/session.h"
 #include "minscan/time.h"
 #include "minscan/transport.h"
 #include "src/core/image/image.h"
 #include "src/core/scan/window.h"
+#include "src/core/session/session.h"
 #include "src/core/tiff.h"
 
 #include <limits.h>
@@ -62,7 +62,7 @@ static int cmd_probe(int argc, char **argv, arg_dstr_t res, void *ctx)
     {
         size_t lenCdb = protoCDBTUR(cdb);
 
-        rc = transportExec(&transport, cdb, lenCdb, MS_DIR_NONE, NULL, 0, 10000, &result);
+        rc = transportExec(&transport, cdb, lenCdb, MS_DIR_NONE, nullptr, 0, 10000, &result);
         if (rc == MS_OK)
         {
             printf("probe: TUR status=%02x host=%04x driver=%04x resid=%d\n", result.status, result.hostStatus,
@@ -81,7 +81,7 @@ static int cmd_probe(int argc, char **argv, arg_dstr_t res, void *ctx)
     if (park->count)
     {
         size_t lenCdb = protoCDBVendor31(0x02, cdb);
-        int    parkRc = transportExec(&transport, cdb, lenCdb, MS_DIR_NONE, NULL, 0, 10000, &result);
+        int    parkRc = transportExec(&transport, cdb, lenCdb, MS_DIR_NONE, nullptr, 0, 10000, &result);
 
         if (parkRc == MS_OK)
         {
@@ -219,23 +219,25 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
         arg_strn("s", "size", "<6x45|6x6|6x7|6x8|6x9|35mm>", 1, 1, "film size (carrier is autodetected)");
     arg_lit_t *glassless = arg_litn("g", "glassless", 0, 1, "use the HA-P2 insert instead of HA-P1 (120 only)");
     arg_str_t *filmtype =
-        arg_strn(NULL, "filmtype", "<colorneg|colorpos|bw>", 1, 1, "film type (changes exposure curves)");
+        arg_strn(nullptr, "filmtype", "<colorneg|colorpos|bw>", 1, 1, "film type (changes exposure curves)");
     arg_int_t *dpi   = arg_intn("d", "dpi", "<dpi>", 1, 1, "DPI for scan (must divide 4800 for 35mm or 3200 for 120)");
-    arg_int_t *frame = arg_intn(NULL, "frame", "<frame>", 0, 1, "frame to scan (35mm: 1..6, 120: 1; default 1)");
-    arg_lit_t *ir    = arg_litn(NULL, "ir", 0, 1, "acquire IR; write a separate _IR TIFF (also with --rgbi)");
+    arg_int_t *frame = arg_intn(nullptr, "frame", "<frame>", 0, 1, "frame to scan (35mm: 1..6, 120: 1; default 1)");
+    arg_lit_t *ir    = arg_litn(nullptr, "ir", 0, 1, "acquire IR; write a separate _IR TIFF (also with --rgbi)");
     arg_str_t *focus = arg_strn("f", "focus", "<-250...250|auto>", 0, 1,
                                 "auto to perform autofocus, or a manual value. defaults to stored device value");
     arg_dbl_t *ev =
         arg_dbln("ev", "exposure_value", "<-2.5...2.5>", 0, 1, "exposure compensation (stops). defaults to 0");
-    arg_lit_t *rgbi = arg_litn(NULL, "rgbi", 0, 1, "write one 64-bit RGBI TIFF (acquires IR; sidecar only with --ir)");
+    arg_lit_t *rgbi =
+        arg_litn(nullptr, "rgbi", 0, 1, "write one 64-bit RGBI TIFF (acquires IR; sidecar only with --ir)");
     arg_lit_t *ice =
-        arg_litn(NULL, "ice", 0, 1,
+        arg_litn(nullptr, "ice", 0, 1,
                  "run ICE dust/scratch removal. acquires IR; the IR plane is written only with --ir or --rgbi");
-    arg_lit_t *calibrate = arg_litn(NULL, "calibrate", 0, 1, "force refresh the scanner's dark/light calibration data");
-    arg_lit_t *verbose   = arg_litn(NULL, "verbose", 0, 1, "show info log lines (ICE rebuild stats, row counts)");
-    arg_file_t *out      = arg_filen(NULL, NULL, "<file>", 1, 1, "output file");
-    arg_lit_t  *help     = arg_litn("h", "help", 0, 1, "show this help");
-    arg_end_t  *end      = arg_end(32);
+    arg_lit_t *calibrate =
+        arg_litn(nullptr, "calibrate", 0, 1, "force refresh the scanner's dark/light calibration data");
+    arg_lit_t  *verbose    = arg_litn(nullptr, "verbose", 0, 1, "show info log lines (ICE rebuild stats, row counts)");
+    arg_file_t *out        = arg_filen(nullptr, nullptr, "<file>", 1, 1, "output file");
+    arg_lit_t  *help       = arg_litn("h", "help", 0, 1, "show this help");
+    arg_end_t  *end        = arg_end(32);
     void       *argtable[] = {help,     device, prescan, filmsize, glassless, dpi,     ev,  focus, frame,
                               filmtype, ir,     ice,     rgbi,     calibrate, verbose, out, end};
 
@@ -312,11 +314,11 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
     }
 
     struct LoadedCarrier carrier = {
-        .type        = media,
-        .film        = film,
-        .formatCode  = formatCode,
-        .glassless   = glassless->count != 0,
-        .ev          = evVal,
+        .type       = media,
+        .film       = film,
+        .formatCode = formatCode,
+        .glassless  = glassless->count != 0,
+        .ev         = evVal,
     };
 
     struct Acquisition acquisition = {0};
@@ -398,7 +400,7 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
         return 1;
     }
 
-    rc = sessionSetLensStage(&session);
+    rc = sessionSelectLensStage(&session);
     if (rc != MS_OK)
     {
         minscanLog(MS_LOG_ERROR, "scan: lens stage: %s", errToString(rc));
@@ -435,7 +437,7 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
     if (autofocus)
     {
         session.pFocusLog = focusLog;
-        session.pFocusCtx = NULL;
+        session.pFocusCtx = nullptr;
 
         printf("focus: autofocus...\n");
         fflush(stdout);
@@ -466,16 +468,16 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
     // path; the vendor reads it before the descriptor. only needed for linear
     // 4-plane scans, where its fine structure removes the IR-mode column
     // banding that the 3-plane path does not have.
-    uint16_t *pBase    = NULL;
+    uint16_t *pBase    = nullptr;
     int       baseCols = 0;
 
     if (writeIR || iceEnabled)
     {
-        rc = sessionReadBase(&session, is35mm, &pBase, &baseCols);
+        rc = sessionReadBase(&session, acquisition.div, &pBase, &baseCols);
         if (rc != MS_OK)
         {
             minscanLog(MS_LOG_WARN, "scan: base table read failed: %s; continuing without fine gain", errToString(rc));
-            pBase    = NULL;
+            pBase    = nullptr;
             baseCols = 0;
         }
     }
@@ -508,12 +510,13 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
 
     rc = imagePostprocess(&imageFrame, &postParams);
     free(pBase);
-    pBase = NULL;
+    pBase = nullptr;
 
     if (rc == MS_OK)
     {
-        double par = (double)acquisition.div * (double)imageFrame.rows / (is35mm ? IMAGE_MAX_ROWS_35 : IMAGE_MAX_ROWS_120);
-        rc         = tiffWrite(out->filename[0], &imageFrame, par, rgbi->count != 0, separateIR);
+        double par =
+            (double)acquisition.div * (double)imageFrame.rows / (is35mm ? IMAGE_MAX_ROWS_35 : IMAGE_MAX_ROWS_120);
+        rc = tiffWrite(out->filename[0], &imageFrame, par, rgbi->count != 0, separateIR);
     }
 
     if (rc != MS_OK)
@@ -539,14 +542,14 @@ static int cmd_focus(int argc, char **argv, arg_dstr_t res, void *ctx)
     (void)res;
     (void)ctx;
 
-    arg_str_t *device    = arg_strn("d", "device", "<device>", 1, 1, "SCSI device");
-    arg_str_t *filmsize  = arg_strn("s", "size", "<6x45|6x6|6x7|6x8|6x9|35mm>", 1, 1, "film size (carrier autodetect)");
-    arg_str_t *filmtype  = arg_strn(NULL, "type", "<colorneg|colorpos|bw>", 1, 1, "film type");
-    arg_int_t *frame     = arg_intn(NULL, "frame_no", "<frame>", 0, 1, "frame to focus (35mm 1..6, 120: 1; default 1)");
-    arg_lit_t *glassless = arg_litn(NULL, "glassless", 0, 1, "use the HA-P2 insert instead of HA-P1 (120 only)");
-    arg_int_t *set       = arg_intn(NULL, "set", "<focus>", 0, 1, "measure one focus position instead of sweeping");
-    arg_lit_t *help      = arg_litn("h", "help", 0, 1, "show this help");
-    arg_end_t *end       = arg_end(20);
+    arg_str_t *device   = arg_strn("d", "device", "<device>", 1, 1, "SCSI device");
+    arg_str_t *filmsize = arg_strn("s", "size", "<6x45|6x6|6x7|6x8|6x9|35mm>", 1, 1, "film size (carrier autodetect)");
+    arg_str_t *filmtype = arg_strn(nullptr, "type", "<colorneg|colorpos|bw>", 1, 1, "film type");
+    arg_int_t *frame = arg_intn(nullptr, "frame_no", "<frame>", 0, 1, "frame to focus (35mm 1..6, 120: 1; default 1)");
+    arg_lit_t *glassless  = arg_litn(nullptr, "glassless", 0, 1, "use the HA-P2 insert instead of HA-P1 (120 only)");
+    arg_int_t *set        = arg_intn(nullptr, "set", "<focus>", 0, 1, "measure one focus position instead of sweeping");
+    arg_lit_t *help       = arg_litn("h", "help", 0, 1, "show this help");
+    arg_end_t *end        = arg_end(20);
     void      *argtable[] = {device, filmsize, filmtype, frame, glassless, set, help, end};
 
     int nerrors  = arg_parse(argc, argv, argtable);
@@ -629,7 +632,7 @@ static int cmd_focus(int argc, char **argv, arg_dstr_t res, void *ctx)
         return 1;
     }
 
-    rc = sessionSetLensStage(&session);
+    rc = sessionSelectLensStage(&session);
     if (rc != MS_OK)
     {
         minscanLog(MS_LOG_ERROR, "focus: lens stage: %s", errToString(rc));
@@ -648,7 +651,7 @@ static int cmd_focus(int argc, char **argv, arg_dstr_t res, void *ctx)
     }
 
     session.pFocusLog = focusLog;
-    session.pFocusCtx = NULL;
+    session.pFocusCtx = nullptr;
 
     int16_t focus = 0;
 
@@ -701,7 +704,7 @@ static int cmd_help(int argc, char **argv, arg_dstr_t res, void *ctx)
 {
     (void)ctx;
 
-    arg_str_t *command    = arg_strn(NULL, NULL, "<command>", 0, 1, "command to describe");
+    arg_str_t *command    = arg_strn(nullptr, nullptr, "<command>", 0, 1, "command to describe");
     arg_lit_t *help       = arg_litn("h", "help", 0, 1, "show this help");
     arg_end_t *end        = arg_end(20);
     void      *argtable[] = {command, help, end};
@@ -735,7 +738,7 @@ static int cmd_help(int argc, char **argv, arg_dstr_t res, void *ctx)
 
     arg_cmd_info_t *info = arg_cmd_info(command->sval[0]);
 
-    if (info == NULL)
+    if (info == nullptr)
     {
         arg_dstr_catf(res, "unknown command: %s\n", command->sval[0]);
         arg_freetable(argtable, sizeof argtable / sizeof argtable[0]);
@@ -755,11 +758,11 @@ int main(int argc, char **argv)
     arg_set_module_version(0, 1, 0, "");
 
     arg_cmd_init();
-    arg_cmd_register("help", cmd_help, "output usage information", NULL);
-    arg_cmd_register("probe", cmd_probe, "probe the scanner", NULL);
-    arg_cmd_register("scan", cmd_scan, "acquire a frame", NULL);
-    arg_cmd_register("focus", cmd_focus, "focus sweep", NULL);
-    arg_cmd_register("eject", cmd_eject, "eject carrier", NULL);
+    arg_cmd_register("help", cmd_help, "output usage information", nullptr);
+    arg_cmd_register("probe", cmd_probe, "probe the scanner", nullptr);
+    arg_cmd_register("scan", cmd_scan, "acquire a frame", nullptr);
+    arg_cmd_register("focus", cmd_focus, "focus sweep", nullptr);
+    arg_cmd_register("eject", cmd_eject, "eject carrier", nullptr);
 
     arg_dstr_t res = arg_dstr_create();
 
@@ -772,7 +775,7 @@ int main(int argc, char **argv)
         return 2;
     }
 
-    if (arg_cmd_info(argv[1]) == NULL)
+    if (arg_cmd_info(argv[1]) == nullptr)
     {
         fprintf(stderr, "unknown command: %s\n", argv[1]);
         arg_cmd_uninit();

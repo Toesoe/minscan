@@ -45,7 +45,7 @@ static int linuxSGTransportOpen(struct Transport *pTransport, const char *szPath
     struct linux_sg *sg;
 
     sg = calloc(1, sizeof *sg);
-    if (sg == NULL)
+    if (sg == nullptr)
     {
         return MS_ERR_NOMEM;
     }
@@ -68,7 +68,7 @@ static int linuxSGTransportExec(const struct Transport *pTransport, const uint8_
     struct linux_sg *sg = pTransport->pCtx;
     sg_io_hdr_t      h;
 
-    if (sg == NULL || sg->fd < 0)
+    if (sg == nullptr || sg->fd < 0)
     {
         return MS_ERR_IO;
     }
@@ -135,7 +135,7 @@ static void linuxSGTransportClose(struct Transport *pTransport)
 {
     struct linux_sg *sg = pTransport->pCtx;
 
-    if (sg == NULL)
+    if (sg == nullptr)
     {
         return;
     }
@@ -144,7 +144,7 @@ static void linuxSGTransportClose(struct Transport *pTransport)
         close(sg->fd);
     }
     free(sg);
-    pTransport->pCtx = NULL;
+    pTransport->pCtx = nullptr;
 }
 
 static const struct TransportOps linuxSGTransportOps = {

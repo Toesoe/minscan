@@ -2,10 +2,10 @@
 
 #include "minscan/error.h"
 #include "minscan/proto.h"
-#include "src/core/session/session.h"
 #include "minscan/transport.h"
 #include "src/core/image/image.h"
 #include "src/core/scan/window.h"
+#include "src/core/session/session.h"
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -44,7 +44,7 @@ static struct MsCalibration apiCalibrations[MS_API_CAL_MAX];
 
 static struct MsCalibration *calibrationSlot(const char *device)
 {
-    struct MsCalibration *pFree = NULL;
+    struct MsCalibration *pFree = nullptr;
 
     for (int i = 0; i < MS_API_CAL_MAX; i++)
     {
@@ -52,12 +52,12 @@ static struct MsCalibration *calibrationSlot(const char *device)
         {
             return &apiCalibrations[i];
         }
-        if (!apiCalibrations[i].used && (pFree == NULL))
+        if (!apiCalibrations[i].used && (pFree == nullptr))
         {
             pFree = &apiCalibrations[i];
         }
     }
-    if (pFree != NULL) return pFree;
+    if (pFree != nullptr) return pFree;
     return &apiCalibrations[0];
 }
 
@@ -110,7 +110,7 @@ static bool calibrationRestore(struct Session *pSession, const char *device)
 
 static void setError(char *err, size_t errlen, const char *fmt, ...)
 {
-    if ((err == NULL) || (errlen == 0))
+    if ((err == nullptr) || (errlen == 0))
     {
         return;
     }
@@ -123,7 +123,7 @@ static void setError(char *err, size_t errlen, const char *fmt, ...)
 
 static int carrierToInternal(const MsLoadedCarrier *pIn, struct LoadedCarrier *pOut)
 {
-    if ((pIn == NULL) || (pOut == NULL)) return MS_ERR_RANGE;
+    if ((pIn == nullptr) || (pOut == nullptr)) return MS_ERR_RANGE;
     if ((pIn->type != MS_API_MEDIA_35MM) && (pIn->type != MS_API_MEDIA_120)) return MS_ERR_RANGE;
     if ((pIn->film < MS_API_FILM_COLOUR_NEG) || (pIn->film > MS_API_FILM_MONO)) return MS_ERR_RANGE;
 
@@ -139,9 +139,9 @@ static int carrierToInternal(const MsLoadedCarrier *pIn, struct LoadedCarrier *p
 
 int ms_probe(const char *device, int *media, char *err, size_t errlen)
 {
-    if (media != NULL) *media = -1;
-    if ((err != NULL) && (errlen > 0)) err[0] = '\0';
-    if ((device == NULL) || (device[0] == '\0'))
+    if (media != nullptr) *media = -1;
+    if ((err != nullptr) && (errlen > 0)) err[0] = '\0';
+    if ((device == nullptr) || (device[0] == '\0'))
     {
         setError(err, errlen, "device is required");
         return MS_ERR_RANGE;
@@ -165,8 +165,8 @@ int ms_probe(const char *device, int *media, char *err, size_t errlen)
     session.pTransport     = &transport;
 
     rc = sessionWaitReady(&session, 5u * 1000u);
-    if (rc == MS_OK) rc = sessionReadPages(&session);
-    if ((rc == MS_OK) && (media != NULL))
+    if (rc == MS_OK) rc = sessionRefreshPages(&session);
+    if ((rc == MS_OK) && (media != nullptr))
     {
         if (session.page24.media == MS_MEDIA_CODE_35MM)
             *media = MS_API_MEDIA_35MM;
@@ -183,19 +183,19 @@ int ms_probe(const char *device, int *media, char *err, size_t errlen)
 
 MsSession *ms_open(const char *device, char *err, size_t errlen)
 {
-    if ((err != NULL) && (errlen > 0)) err[0] = '\0';
-    if ((device == NULL) || (device[0] == '\0'))
+    if ((err != nullptr) && (errlen > 0)) err[0] = '\0';
+    if ((device == nullptr) || (device[0] == '\0'))
     {
         setError(err, errlen, "device is required");
-        return NULL;
+        return nullptr;
     }
 
     MsSession *pSession = calloc(1, sizeof *pSession);
 
-    if (pSession == NULL)
+    if (pSession == nullptr)
     {
         setError(err, errlen, "out of memory");
-        return NULL;
+        return nullptr;
     }
 
     const int rc = transportOpen(&pSession->transport, device);
@@ -204,7 +204,7 @@ MsSession *ms_open(const char *device, char *err, size_t errlen)
     {
         setError(err, errlen, "open %s: %s", device, errToString(rc));
         free(pSession);
-        return NULL;
+        return nullptr;
     }
 
     snprintf(pSession->device, sizeof pSession->device, "%s", device);
@@ -214,12 +214,12 @@ MsSession *ms_open(const char *device, char *err, size_t errlen)
 
 void ms_frame_free(MsSession *session)
 {
-    if (session != NULL) imageFrameFreePlanes(&session->frame);
+    if (session != nullptr) imageFrameFreePlanes(&session->frame);
 }
 
 void ms_close(MsSession *session)
 {
-    if (session == NULL) return;
+    if (session == nullptr) return;
 
     ms_frame_free(session);
     if (session->transportOpen) transportClose(&session->transport);
@@ -228,8 +228,8 @@ void ms_close(MsSession *session)
 
 int ms_configure(MsSession *session, const MsLoadedCarrier *carrier, char *err, size_t errlen)
 {
-    if ((err != NULL) && (errlen > 0)) err[0] = '\0';
-    if ((session == NULL) || (carrier == NULL)) return MS_ERR_RANGE;
+    if ((err != nullptr) && (errlen > 0)) err[0] = '\0';
+    if ((session == nullptr) || (carrier == nullptr)) return MS_ERR_RANGE;
 
     struct LoadedCarrier internal;
 
@@ -259,8 +259,8 @@ int ms_configure(MsSession *session, const MsLoadedCarrier *carrier, char *err, 
 
 int ms_calibrate(MsSession *session, MsProgressFn progress, void *ctx, char *err, size_t errlen)
 {
-    if ((err != NULL) && (errlen > 0)) err[0] = '\0';
-    if ((session == NULL) || !session->configured) return MS_ERR_UNINITIALIZED;
+    if ((err != nullptr) && (errlen > 0)) err[0] = '\0';
+    if ((session == nullptr) || !session->configured) return MS_ERR_UNINITIALIZED;
 
     session->session.pProgress       = (SessionProgressFn)progress;
     session->session.pProgressCtx    = ctx;
@@ -268,7 +268,7 @@ int ms_calibrate(MsSession *session, MsProgressFn progress, void *ctx, char *err
 
     const int rc = sessionCalibrate(&session->session);
 
-    session->session.pProgress = NULL;
+    session->session.pProgress = nullptr;
 
     if (rc != MS_OK)
     {
@@ -281,8 +281,8 @@ int ms_calibrate(MsSession *session, MsProgressFn progress, void *ctx, char *err
 
 int ms_scan(MsSession *session, const MsRequest *request, MsProgressFn progress, void *ctx, char *err, size_t errlen)
 {
-    if ((err != NULL) && (errlen > 0)) err[0] = '\0';
-    if ((session == NULL) || (request == NULL)) return MS_ERR_RANGE;
+    if ((err != nullptr) && (errlen > 0)) err[0] = '\0';
+    if ((session == nullptr) || (request == nullptr)) return MS_ERR_RANGE;
     if (!session->configured) return MS_ERR_UNINITIALIZED;
     if (request->dpi <= 0) return MS_ERR_RANGE;
 
@@ -301,7 +301,7 @@ int ms_scan(MsSession *session, const MsRequest *request, MsProgressFn progress,
     const bool is35mm = session->carrier.type == MS_API_MEDIA_35MM;
     unsigned   div    = 0;
     int        rc;
-    uint16_t  *pBase    = NULL;
+    uint16_t  *pBase    = nullptr;
     int        baseCols = 0;
 
     if (request->prescan)
@@ -343,7 +343,7 @@ int ms_scan(MsSession *session, const MsRequest *request, MsProgressFn progress,
         (void)calibrationRestore(pS, session->device);
     }
 
-    rc = sessionSetLensStage(pS);
+    rc = sessionSelectLensStage(pS);
     if (rc != MS_OK)
     {
         setError(err, errlen, "lens stage: %s", errToString(rc));
@@ -387,7 +387,7 @@ int ms_scan(MsSession *session, const MsRequest *request, MsProgressFn progress,
 
     if (request->capture_ir || request->ice)
     {
-        rc = sessionReadBase(pS, is35mm, &pBase, &baseCols);
+        rc = sessionReadBase(pS, div, &pBase, &baseCols);
         if (rc != MS_OK)
         {
             setError(err, errlen, "0x83 base read: %s", errToString(rc));
@@ -410,7 +410,7 @@ int ms_scan(MsSession *session, const MsRequest *request, MsProgressFn progress,
         goto fail_frame;
     }
 
-    if ((frame.numPlanes == 4) && (pBase == NULL))
+    if ((frame.numPlanes == 4) && (pBase == nullptr))
     {
         setError(err, errlen, "0x83 base table unavailable");
         rc = MS_ERR;
@@ -427,7 +427,7 @@ int ms_scan(MsSession *session, const MsRequest *request, MsProgressFn progress,
 
     rc = imagePostprocess(&frame, &postParams);
     free(pBase);
-    pBase = NULL;
+    pBase = nullptr;
     if (rc != MS_OK)
     {
         setError(err, errlen, "image pipeline: %s", errToString(rc));
@@ -435,45 +435,45 @@ int ms_scan(MsSession *session, const MsRequest *request, MsProgressFn progress,
     }
 
     session->frame = frame;
-    pS->pProgress  = NULL;
+    pS->pProgress  = nullptr;
     return MS_OK;
 
 fail_frame:
     free(pBase);
-    pBase = NULL;
+    pBase = nullptr;
     imageFrameFreePlanes(&frame);
 fail:
     free(pBase);
-    pS->pProgress = NULL;
-    if (err != NULL && errlen > 0 && err[0] == '\0') setError(err, errlen, "%s", errToString(rc));
+    pS->pProgress = nullptr;
+    if (err != nullptr && errlen > 0 && err[0] == '\0') setError(err, errlen, "%s", errToString(rc));
     return rc;
 }
 
 void ms_cancel(MsSession *session)
 {
-    if (session != NULL) session->session.cancelRequested = true;
+    if (session != nullptr) session->session.cancelRequested = true;
 }
 
 int ms_frame_geometry(const MsSession *session, int *rows, int *cols, int *planes, size_t *row_stride)
 {
-    if ((session == NULL) || (session->frame.ppPlanes == NULL)) return MS_ERR_UNINITIALIZED;
-    if (rows != NULL) *rows = session->frame.rows;
-    if (cols != NULL) *cols = session->frame.cols;
-    if (planes != NULL) *planes = session->frame.numPlanes;
-    if (row_stride != NULL) *row_stride = session->frame.rowStride;
+    if ((session == nullptr) || (session->frame.ppPlanes == nullptr)) return MS_ERR_UNINITIALIZED;
+    if (rows != nullptr) *rows = session->frame.rows;
+    if (cols != nullptr) *cols = session->frame.cols;
+    if (planes != nullptr) *planes = session->frame.numPlanes;
+    if (row_stride != nullptr) *row_stride = session->frame.rowStride;
     return MS_OK;
 }
 
 const uint16_t *ms_frame_plane(const MsSession *session, int plane)
 {
-    if ((session == NULL) || (plane < 0) || (plane >= session->frame.numPlanes)) return NULL;
+    if ((session == nullptr) || (plane < 0) || (plane >= session->frame.numPlanes)) return nullptr;
     return session->frame.ppPlanes[plane];
 }
 
 int ms_eject(MsSession *session, char *err, size_t errlen)
 {
-    if ((err != NULL) && (errlen > 0)) err[0] = '\0';
-    if (session == NULL) return MS_ERR_RANGE;
+    if ((err != nullptr) && (errlen > 0)) err[0] = '\0';
+    if (session == nullptr) return MS_ERR_RANGE;
 
     uint8_t                cdb[10];
     struct TransportResult res;
@@ -481,7 +481,7 @@ int ms_eject(MsSession *session, char *err, size_t errlen)
 
     if (n == 0) return MS_ERR_RANGE;
 
-    const int rc = transportExec(&session->transport, cdb, n, MS_DIR_NONE, NULL, 0, 10000, &res);
+    const int rc = transportExec(&session->transport, cdb, n, MS_DIR_NONE, nullptr, 0, 10000, &res);
 
     if (rc != MS_OK)
     {

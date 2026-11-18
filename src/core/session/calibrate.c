@@ -21,7 +21,7 @@ int sessionCalibrate(struct Session *pSession)
 {
     uint8_t buf[8];
 
-    if ((pSession == NULL) || (pSession->pTransport == NULL))
+    if ((pSession == nullptr) || (pSession->pTransport == nullptr))
     {
         return MS_ERR_RANGE;
     }
@@ -56,11 +56,6 @@ int sessionCalibrate(struct Session *pSession)
 
         minscanLog(MS_LOG_DEBUG, "calibrate: state %02x", state);
 
-        if (pSession->pProgress != NULL)
-        {
-            pSession->pProgress(pSession->pProgressCtx, MS_PHASE_CALIBRATE, step, 3);
-        }
-
         const int waitRc = sessionWaitReady(pSession, 120u * TIME_PER_SEC);
 
         if (waitRc != MS_OK)
@@ -68,15 +63,16 @@ int sessionCalibrate(struct Session *pSession)
             return waitRc;
         }
         step++;
-    }
-    if (pSession->pProgress != NULL)
-    {
-        pSession->pProgress(pSession->pProgressCtx, MS_PHASE_CALIBRATE, 3, 3);
+
+        if (pSession->pProgress != nullptr)
+        {
+            pSession->pProgress(pSession->pProgressCtx, MS_PHASE_CALIBRATE, step, 3);
+        }
     }
 
     // the device re-measures its exposure parameters during calibration; the
     // vendor reads SatExpTime after the sweep, before building the descriptor
-    int rc = sessionReadSat(pSession);
+    int rc = sessionReadSatExpTime(pSession);
 
     if (rc == MS_OK)
     {
@@ -88,45 +84,72 @@ int sessionCalibrate(struct Session *pSession)
     return rc;
 }
 
-int sessionReadBase(struct Session *pSession, bool is35mm, uint16_t **ppBase, int *pCols)
+int sessionReadBase(struct Session *pSession, unsigned div, uint16_t **ppBase, int *pCols)
 {
-    if ((pSession == NULL) || (ppBase == NULL) || (pCols == NULL))
+    if ((pSession == nullptr) || (pSession->pTransport == nullptr) || (ppBase == nullptr) || (pCols == nullptr) ||
+        (div == 0))
     {
         return MS_ERR_RANGE;
     }
 
-    *ppBase = NULL;
+    *ppBase = nullptr;
     *pCols  = 0;
 
-    const int      cols = is35mm ? IMAGE_MAX_COLS_35 : IMAGE_MAX_COLS_120;
-    const uint16_t word = is35mm ? 0x0000 : 0x0001;
-    const size_t   len  = (size_t)cols * 4u * sizeof(uint16_t);
+    const bool     is35mm  = (pSession->carrier.type == MS_CARRIER_35MM);
+    const int      srcCols = is35mm ? IMAGE_MAX_COLS_35 : IMAGE_MAX_COLS_120;
+    const uint16_t word    = is35mm ? (uint16_t)MS_WORD_INIT_BANK0 : (uint16_t)MS_WORD_INIT_BANK1;
+    const size_t   srcLen  = (size_t)srcCols * 4u * sizeof(uint16_t);
 
-    uint8_t *pBuf = malloc(len);
+    // read the full-width bank straight into the buffer the caller will own
+    uint16_t *pBase = malloc(srcLen);
 
-    if (pBuf == NULL)
+    if (pBase == nullptr)
     {
         return MS_ERR_NOMEM;
     }
 
-    const int rc = sessionReadParam(pSession, MS_SEL_INIT, word, pBuf, len);
+    const int rc = sessionReadParam(pSession, MS_SEL_INIT, word, (uint8_t *)pBase, srcLen);
 
     if (rc != MS_OK)
     {
-        free(pBuf);
+        free(pBase);
         return rc;
     }
 
-    uint16_t *pBase = malloc(len);
+    const int cols = srcCols / (int)div;
 
-    if (pBase == NULL)
+    if (cols <= 0)
     {
-        free(pBuf);
-        return MS_ERR_NOMEM;
+        free(pBase);
+        return MS_ERR_RANGE;
     }
 
-    memcpy(pBase, pBuf, len);
-    free(pBuf);
+    // the vendor decimates the full-width reference to the scan plan's column
+    // count (FUN_1000a560). average each output column over its source slice, in
+    // place: every destination plane starts at or before its source plane, and
+    // each output index is below its own source start, so no unread input is
+    // overwritten
+    if (cols != srcCols)
+    {
+        for (int plane = 0; plane < 4; plane++)
+        {
+            const uint16_t *pIn  = pBase + (size_t)plane * (size_t)srcCols;
+            uint16_t       *pOut = pBase + (size_t)plane * (size_t)cols;
+
+            for (int col = 0; col < cols; col++)
+            {
+                const int start = col * srcCols / cols;
+                const int end   = (col + 1) * srcCols / cols;
+                unsigned  sum   = 0;
+
+                for (int i = start; i < end; i++)
+                {
+                    sum += pIn[i];
+                }
+                pOut[col] = (uint16_t)(sum / (unsigned)(end - start));
+            }
+        }
+    }
 
     *ppBase = pBase;
     *pCols  = cols;

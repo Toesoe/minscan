@@ -1,8 +1,8 @@
 #include "minscan/error.h"
 #include "minscan/proto.h"
+#include "src/core/image/image.h"
 #include "src/core/session/session.h"
 #include "src/core/wire/descriptor.h"
-#include "src/core/image/image.h"
 #include "test.h"
 
 #include <string.h>
@@ -61,7 +61,7 @@ static int mockExec(const struct Transport *pTransport, const uint8_t *pCdb, siz
 
             if (page == MS_PAGE_FRAME)
             {
-                if ((pBuf == NULL) || (bufLen < 9))
+                if ((pBuf == nullptr) || (bufLen < 9))
                 {
                     return MS_ERR_RANGE;
                 }
@@ -74,7 +74,7 @@ static int mockExec(const struct Transport *pTransport, const uint8_t *pCdb, siz
             }
             if (page == MS_PAGE_LENS)
             {
-                if ((pBuf == NULL) || (bufLen < 11))
+                if ((pBuf == nullptr) || (bufLen < 11))
                 {
                     return MS_ERR_RANGE;
                 }
@@ -87,7 +87,7 @@ static int mockExec(const struct Transport *pTransport, const uint8_t *pCdb, siz
             }
             if (page == MS_PAGE_JOB)
             {
-                if ((pBuf == NULL) || (bufLen < 8))
+                if ((pBuf == nullptr) || (bufLen < 8))
                 {
                     return MS_ERR_RANGE;
                 }
@@ -101,7 +101,7 @@ static int mockExec(const struct Transport *pTransport, const uint8_t *pCdb, siz
         }
         case MS_OP_MODE_SELECT6:
         {
-            if (pBuf == NULL)
+            if (pBuf == nullptr)
             {
                 return MS_ERR_RANGE;
             }
@@ -123,7 +123,7 @@ static int mockExec(const struct Transport *pTransport, const uint8_t *pCdb, siz
         }
         case MS_OP_WRITE10:
         {
-            if ((pBuf == NULL) || (bufLen != (size_t)DESC_LEN))
+            if ((pBuf == nullptr) || (bufLen != (size_t)DESC_LEN))
             {
                 return MS_ERR_RANGE;
             }
@@ -137,7 +137,7 @@ static int mockExec(const struct Transport *pTransport, const uint8_t *pCdb, siz
             {
                 static const uint8_t sat[8] = {0x02, 0xb3, 0x02, 0x83, 0x02, 0xb7, 0x02, 0x4a};
 
-                if ((pBuf == NULL) || (bufLen < 8))
+                if ((pBuf == nullptr) || (bufLen < 8))
                 {
                     return MS_ERR_RANGE;
                 }
@@ -146,7 +146,7 @@ static int mockExec(const struct Transport *pTransport, const uint8_t *pCdb, siz
             }
             if (pCdb[2] == (uint8_t)MS_SEL_DATA_NO_IR)
             {
-                if ((pBuf == NULL) || (bufLen == 0))
+                if ((pBuf == nullptr) || (bufLen == 0))
                 {
                     return MS_ERR_RANGE;
                 }
@@ -168,9 +168,9 @@ static int mockExec(const struct Transport *pTransport, const uint8_t *pCdb, siz
 }
 
 static const struct TransportOps mockOps = {
-    .open  = NULL,
+    .open  = nullptr,
     .exec  = mockExec,
-    .close = NULL,
+    .close = nullptr,
 };
 
 static void resetMock(struct MockState *pState, uint8_t media, uint8_t frameGroup, uint16_t maxDPI)
@@ -225,7 +225,7 @@ int main(void)
     session.carrier.type = MS_CARRIER_35MM;
 
     state.selectCount = 0;
-    CHECK(sessionSetLensStage(&session) == MS_OK);
+    CHECK(sessionSelectLensStage(&session) == MS_OK);
     CHECK(state.selectCount == 1);
     CHECK(state.lastSelectPage == MS_PAGE_LENS);
     CHECK(state.lastSelectBuf[6] == 0x12);
@@ -234,7 +234,7 @@ int main(void)
     CHECK(state.maxDPI == 4800);
 
     state.selectCount = 0;
-    CHECK(sessionSetLensStage(&session) == MS_OK);
+    CHECK(sessionSelectLensStage(&session) == MS_OK);
     CHECK(state.selectCount == 0); // already at 4800
 
     // 120 must move a leftover 35 mm stage back to 3200
@@ -245,7 +245,7 @@ int main(void)
     session.carrier.type = MS_CARRIER_120;
 
     state.selectCount = 0;
-    CHECK(sessionSetLensStage(&session) == MS_OK);
+    CHECK(sessionSelectLensStage(&session) == MS_OK);
     CHECK(state.selectCount == 1);
     CHECK(state.lastSelectBuf[6] == 0x0c);
     CHECK(state.lastSelectBuf[7] == 0x80); // 3200
@@ -354,7 +354,7 @@ int main(void)
 
     // cmd_scan selects the stage before acquiring; a stage move resets focus
     state.selectCount = 0;
-    CHECK(sessionSetLensStage(&session) == MS_OK);
+    CHECK(sessionSelectLensStage(&session) == MS_OK);
     CHECK(state.selectCount == 1);
 
     // a scan does not re-calibrate an already-calibrated carrier
@@ -378,7 +378,7 @@ int main(void)
     CHECK(frame.numPlanes == 1);
     CHECK(frame.terminatorFailed == false);
     CHECK(state.readCount == 876);
-    CHECK(frame.ppPlanes != NULL);
+    CHECK(frame.ppPlanes != nullptr);
     CHECK(frame.ppPlanes[0][0] == 0x5a5a);
     imageFrameFreePlanes(&frame);
 

@@ -1,7 +1,7 @@
 #include "minscan/proto.h"
 
-#include "src/core/wire/descriptor.h"
 #include "minscan/error.h"
+#include "src/core/wire/descriptor.h"
 
 #include <string.h>
 
@@ -82,7 +82,7 @@ size_t protoCDBVendor31(uint8_t sub, uint8_t cdb[10])
 
 int protoPage24Parse(const uint8_t *pBuf, size_t len, struct ProtoPage24 *pOut)
 {
-    if (pBuf == NULL || pOut == NULL || len < 9)
+    if (pBuf == nullptr || pOut == nullptr || len < 9)
     {
         return MS_ERR_PROTO;
     }
@@ -112,7 +112,7 @@ size_t protoPage24Select(uint8_t frame_group, uint8_t out[9])
 
 int protoPage25Parse(const uint8_t *pBuf, size_t len, struct ProtoPage25 *pOut)
 {
-    if (pBuf == NULL || pOut == NULL || len < 10)
+    if (pBuf == nullptr || pOut == nullptr || len < 10)
     {
         return MS_ERR_PROTO;
     }
@@ -145,7 +145,7 @@ size_t protoPage25Select(uint16_t max_dpi, int16_t focus, uint8_t out[11])
 
 int protoPage28Parse(const uint8_t *pBuf, size_t len, struct ProtoPage28 *pOut)
 {
-    if (pBuf == NULL || pOut == NULL || len < 8)
+    if (pBuf == nullptr || pOut == nullptr || len < 8)
     {
         return MS_ERR_PROTO;
     }

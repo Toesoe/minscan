@@ -35,7 +35,7 @@ struct ImagePostParams
     bool            is35mm;   ///< 35mm carrier; selects coreg shifts and balance targets
     bool            ice;      ///< run ICE after the IR normalisation
     unsigned        div;      ///< resolution divisor, used to derive the ICE dpi
-    const uint16_t *pBase;    ///< ptr to the 0x83 base table; NULL skips the 4-plane base gain
+    const uint16_t *pBase;    ///< ptr to the 0x83 base table; nullptr skips the 4-plane base gain
     int             baseCols; ///< columns in @ref pBase
 };
 

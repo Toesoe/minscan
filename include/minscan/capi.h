@@ -67,7 +67,7 @@ typedef void (*MsProgressFn)(void *ctx, int phase, int done, int total);
 /** @brief probe a device without keeping it open (enumeration)
  *
  * @p media receives @ref MsMedia when a carrier is detected, or -1 when no
- * usable carrier is loaded. It may be NULL.
+ * usable carrier is loaded. It may be nullptr.
  */
 int ms_probe(const char *device, int *media, char *err, size_t errlen);
 

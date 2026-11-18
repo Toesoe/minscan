@@ -27,7 +27,7 @@ size_t imageWireRowBytes(int cols, int planes)
 
 int imageUnpackRow(struct Frame *pFrame, int row, const uint8_t *pData, size_t dataLen)
 {
-    if (pFrame == NULL || pData == NULL || pFrame->ppPlanes == NULL || row < 0 || row >= pFrame->rows)
+    if (pFrame == nullptr || pData == nullptr || pFrame->ppPlanes == nullptr || row < 0 || row >= pFrame->rows)
     {
         return MS_ERR_RANGE;
     }

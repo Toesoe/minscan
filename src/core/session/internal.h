@@ -17,6 +17,11 @@
 #include "src/core/wire/descriptor.h"
 
 #define SESSION_READ_TIMEOUT_MS 10000u
+#define SESSION_SENSE_FIXED_LEN 14u ///< fixed sense: key at +2, asc at +12, ascq at +13
+
+#define SESSION_PAGE24_READ_LEN 9u  ///< page 0x24 MODE SENSE response length
+#define SESSION_PAGE25_READ_LEN 11u ///< page 0x25 MODE SENSE response length
+#define SESSION_PAGE28_READ_LEN 8u  ///< page 0x28 MODE SENSE response length
 
 #define SESSION_FOCUS_MIN       (-250)
 #define SESSION_FOCUS_MAX       250
@@ -26,11 +31,11 @@
 /**
  * @brief log a failed command and return MS_ERR_PROTO
  *
- * @param szWhat string containing error type (e.g. "mode select")
+ * @param szOperation string containing error type (e.g. "mode select")
  * @param pRes pointer to transfer result containing error code
  * @return int status code
  */
-int sessionScsiError(const char *szWhat, const struct TransportResult *pRes);
+int sessionLogScsiError(const char *szOperation, const struct TransportResult *pRes);
 
 /**
  * @brief execute a CDB, wrapped in retry policy
@@ -53,12 +58,12 @@ int sessionExecCdb(struct Session *pSession, const uint8_t *pCdb, size_t cdbLen,
  *
  * @param pSession pointer to active session
  * @param page page code to read
- * @param alloc the allocation-length byte for this read
+ * @param allocLen the allocation-length byte for this read
  * @param pBuf pointer to destination buffer
  * @param len length of data buffer: 1..255
  * @return int status code
  */
-int sessionModeSense(struct Session *pSession, uint8_t page, uint8_t alloc, uint8_t *pBuf, size_t len);
+int sessionModeSense(struct Session *pSession, uint8_t page, uint8_t allocLen, uint8_t *pBuf, size_t len);
 
 /**
  * @brief write a single page (MODE SELECT(6))
@@ -83,13 +88,13 @@ int sessionWriteDescriptor(struct Session *pSession, const struct Descriptor *pD
  * @brief fetch a parameter (READ(10))
  *
  * @param pSession pointer to active session
- * @param sel selector byte for parameter
+ * @param selector selector byte for parameter
  * @param word parameter word
  * @param pBuf pointer to destination buffer
  * @param len length of destination buffer
  * @return int status code
  */
-int sessionReadParam(struct Session *pSession, uint8_t sel, uint16_t word, uint8_t *pBuf, size_t len);
+int sessionReadParam(struct Session *pSession, uint8_t selector, uint16_t word, uint8_t *pBuf, size_t len);
 
 /**
  * @brief stop the mechanism. sends an ignored TUR and the park command
@@ -122,10 +127,10 @@ int sessionWaitIdle(struct Session *pSession, unsigned timeoutMs);
  * @brief retrieve the maximum frame group number for a carrier type
  *
  * @param carrier currently loaded carrier
- * @param pMaxOut maximum frame group number
+ * @param pMaxGroup maximum frame group number
  * @return int status code
  */
-int sessionMaxFrameGroup(enum Carrier carrier, unsigned *pMaxOut);
+int sessionMaxFrameGroup(enum Carrier carrier, unsigned *pMaxGroup);
 
 /**
  * @brief convert a ProtoMediaCode enum (from page 0x24) to a Carrier enum
@@ -151,7 +156,7 @@ int sessionWaitReady(struct Session *pSession, unsigned timeoutMs);
  * @param pSession pointer to active sesssion
  * @return int status code
  */
-int sessionReadSat(struct Session *pSession);
+int sessionReadSatExpTime(struct Session *pSession);
 
 /**
  * @brief obtain a pointer to the Sat quadruple for a carrier
@@ -177,12 +182,11 @@ bool sessionSatIsZero(const struct Sat *pSat);
  * @brief convert the session's Sat quad and request into an Exposure struct (f2..f5 selectors)
  *
  * @param pSession pointer to active session
- * @param pAcquisition pointer to active acquisition; ir and ev options used
- * @param prescan when true, uses the 832 ceiling for prescans instead of the 4095 for scans
+ * @param pAcquisition pointer to active acquisition; job, ir and ev options used
  * @param pOut pointer to resulting exposure struct
  * @return int status code
  */
-int sessionDeriveExposure(const struct Session *pSession, const struct Acquisition *pAcquisition, bool prescan,
+int sessionDeriveExposure(const struct Session *pSession, const struct Acquisition *pAcquisition,
                           struct Exposure *pOut);
 
 /**

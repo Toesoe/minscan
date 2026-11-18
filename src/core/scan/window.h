@@ -72,7 +72,7 @@ int scanResolveWindow(const struct DescriptorParameters *pParams, struct Window 
  * @brief get the format row by vendor format code
  *
  * @param code format code
- * @return const struct DescriptorFormat* or NULL
+ * @return const struct DescriptorFormat* or nullptr
  */
 const struct DescriptorFormat *scanFormatByCode(uint16_t code);
 

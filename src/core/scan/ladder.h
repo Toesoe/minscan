@@ -32,6 +32,6 @@ struct DescriptorIR
  * @return struct DescriptorIR block
  */
 struct DescriptorIR scanIRParameters(const struct Window *pWindow, const struct DescriptorParameters *pParams,
-                                 unsigned passes, uint16_t maxExposure);
+                                     unsigned passes, uint16_t maxExposure);
 
 #endif //! LADDER_H_

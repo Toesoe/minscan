@@ -209,7 +209,7 @@ static struct IRTriple irTriple(char ladder, int rung, double durationSec)
 }
 
 struct DescriptorIR scanIRParameters(const struct Window *pWindow, const struct DescriptorParameters *pParams,
-                                 unsigned passes, uint16_t maxExposure)
+                                     unsigned passes, uint16_t maxExposure)
 {
     struct DescriptorIR ir = {.level = IR_DEFAULT_LEVEL, .p = 0, .q = 0};
 

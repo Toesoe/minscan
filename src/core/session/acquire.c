@@ -1,7 +1,7 @@
 /**
  * @file acquire.c
  * @author your name (you@domain.com)
- * @brief
+ * @brief job runner: validate request, arm, write descriptor, stream rows, park
  * @version 0.1
  * @date 18-11-2026
  *
@@ -17,65 +17,63 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define ARM_POLL_COUNT 14
-#define ARM_POLL_MS    48u
+#define ARM_POLL_ATTEMPTS 14
+#define ARM_POLL_MS       48u
 
+/** @brief a read burst plan for a single acquisition */
 struct BurstPlan
 {
-    uint8_t  sel;
+    uint8_t  selector;
     uint16_t word;
     int      cols;
     int      planes;
-    int      rowLen;
+    int      rowBytes;
     int      rows;
-    bool     terminator;
+    bool     hasTerminator;
 };
 
+/**
+ * @brief turn a job descriptor into a read burst plan
+ *
+ * @param pJob pointer to job descriptor. the device already knows this
+ * @param pAcquisition pointer to active acquisition context
+ * @param pPlanOut output burst plan
+ * @return int status code
+ */
 static int burstPlanFor(const struct Descriptor *pJob, const struct Acquisition *pAcquisition,
                         struct BurstPlan *pPlanOut)
 {
-    bool     colour;
-    int      planes;
-    int      divisor;
-    int      width;
-    int      rowUnit;
-    int      scaledRows;
-    int      cols;
-    int      rows;
-    int      rowLen;
-    uint16_t word;
-
-    if ((pJob == NULL) || (pAcquisition == NULL) || (pPlanOut == NULL))
+    if ((pJob == nullptr) || (pAcquisition == nullptr) || (pPlanOut == nullptr))
     {
         return MS_ERR_RANGE;
     }
 
-    colour = (descriptorGetMode(pJob) == DESC_MODE_COLOUR);
-    planes = 1;
+    bool     colour     = (descriptorGetMode(pJob) == DESC_MODE_COLOUR);
+    int      planes     = 1;
+    int      divisor    = (int)descriptorGetDivisor(pJob);
+    int      width      = (int)descriptorGetWidth(pJob);
+    int      rowUnit    = (int)descriptorGetRowUnit(pJob);
+    int      scaledRows = (int)descriptorGetRows(pJob);
+    uint16_t word       = (uint16_t)MS_WORD_DATA_BASE | (uint16_t)rowUnit;
+
     if (colour)
     {
-        planes = (pAcquisition->ir != 0) ? 4 : 3;
+        planes = pAcquisition->ir ? 4 : 3;
     }
-
-    divisor    = (int)descriptorGetDivisor(pJob);
-    width      = (int)descriptorGetWidth(pJob);
-    rowUnit    = (int)descriptorGetRowUnit(pJob);
-    scaledRows = (int)descriptorGetRows(pJob);
 
     if ((divisor <= 0) || (width <= 0) || (rowUnit <= 0) || (scaledRows <= 0))
     {
         return MS_ERR_PROTO;
     }
 
-    cols = width / divisor;
-    rows = scaledRows / rowUnit;
+    int cols = width / divisor;
+    int rows = scaledRows / rowUnit;
+
     if ((cols <= 0) || (rows <= 0))
     {
         return MS_ERR_PROTO;
     }
-    rowLen = cols * 2 * planes;
 
-    word = (uint16_t)MS_WORD_DATA_BASE;
     if (colour)
     {
         word |= (uint16_t)MS_WORD_DATA_COLOUR;
@@ -84,180 +82,215 @@ static int burstPlanFor(const struct Descriptor *pJob, const struct Acquisition 
     {
         word |= (uint16_t)MS_WORD_DATA_SCAN;
     }
-    word |= (uint16_t)descriptorGetRowUnit(pJob);
 
-    pPlanOut->sel        = pAcquisition->ir ? (uint8_t)MS_SEL_DATA_IR : (uint8_t)MS_SEL_DATA_NO_IR;
-    pPlanOut->word       = word;
-    pPlanOut->cols       = cols;
-    pPlanOut->planes     = planes;
-    pPlanOut->rowLen     = rowLen;
-    pPlanOut->rows       = rows;
-    pPlanOut->terminator = (pAcquisition->job == MS_JOB_PRESCAN) ||
-                           ((pAcquisition->job == MS_JOB_SCAN) && (pAcquisition->div == 1));
+    pPlanOut->selector      = pAcquisition->ir ? (uint8_t)MS_SEL_DATA_IR : (uint8_t)MS_SEL_DATA_NO_IR;
+    pPlanOut->word          = word;
+    pPlanOut->cols          = cols;
+    pPlanOut->planes        = planes;
+    pPlanOut->rowBytes      = cols * 2 * planes;
+    pPlanOut->rows          = rows;
+    pPlanOut->hasTerminator = (pAcquisition->job == MS_JOB_PRESCAN) ||
+                              ((pAcquisition->job == MS_JOB_SCAN) && (pAcquisition->div == 1));
     return MS_OK;
 }
 
-static void frameTruncate(struct Frame *pFrame, int rows, int rowLen)
+/**
+ * @brief truncate a partial frame
+ *
+ * @param pFrame pointer to read frame
+ * @param keepRows number of rows to keep
+ * @param rowBytes wire bytes per row
+ */
+static void frameTruncate(struct Frame *pFrame, int keepRows, int rowBytes)
 {
-    pFrame->rows = rows;
-    pFrame->len  = (size_t)rows * (size_t)rowLen;
+    pFrame->rows = keepRows;
+    pFrame->len  = (size_t)keepRows * (size_t)rowBytes;
 }
 
-static int sessionReadBurst(struct Session *pSession, const struct Descriptor *pJob,
-                            const struct Acquisition *pAcquisition, struct Frame *pFrame)
+/**
+ * @brief row acquisition loop
+ *
+ * @param pSession pointer to active session
+ * @param pJob pointer to job descriptor for active session
+ * @param pAcquisition pointer to active acquisition context
+ * @param pFrame pointer to output frame
+ * @return int status code
+ */
+static int readBurst(struct Session *pSession, const struct Descriptor *pJob, const struct Acquisition *pAcquisition,
+                     struct Frame *pFrame)
 {
     struct BurstPlan plan;
-    uint8_t          cdb[10];
-    uint8_t          cdbTerm[10];
-    uint8_t         *pRow;
-    int              rc;
 
-    rc = burstPlanFor(pJob, pAcquisition, &plan);
+    int rc = burstPlanFor(pJob, pAcquisition, &plan);
+
     if (rc != MS_OK)
     {
         return rc;
     }
 
     rc = imageFrameAlloc(pFrame, plan.rows, plan.cols, plan.planes);
+
     if (rc != MS_OK)
     {
         return rc;
     }
 
-    pRow = malloc((size_t)plan.rowLen);
-    if (pRow == NULL)
+    uint8_t *pWireRow = malloc((size_t)plan.rowBytes);
+
+    if (pWireRow == nullptr)
     {
         imageFrameFreePlanes(pFrame);
         return MS_ERR_NOMEM;
     }
 
-    if ((protoCDBRead(plan.sel, plan.word, (uint32_t)plan.rowLen, cdb) == 0) ||
-        (protoCDBRead(plan.sel, (uint16_t)(plan.word & MS_WORD_TERM_MASK), (uint32_t)plan.rowLen, cdbTerm) == 0))
+    uint8_t cdbRead[10];
+    uint8_t cdbTerminator[10];
+
+    if ((protoCDBRead(plan.selector, plan.word, (uint32_t)plan.rowBytes, cdbRead) == 0) ||
+        (protoCDBRead(plan.selector, (uint16_t)(plan.word & MS_WORD_TERM_MASK), (uint32_t)plan.rowBytes,
+                      cdbTerminator) == 0))
     {
-        free(pRow);
+        free(pWireRow);
         imageFrameFreePlanes(pFrame);
         return MS_ERR_RANGE;
     }
 
+    // read all rows in the plan into the frame
     for (int row = 0; row < plan.rows; row++)
     {
-        bool                   isTerminator = plan.terminator && (row == (plan.rows - 1));
-        const uint8_t         *pCdb         = isTerminator ? cdbTerm : cdb;
+        bool                   isTerminator = plan.hasTerminator && (row == (plan.rows - 1));
+        const uint8_t         *pCdb         = isTerminator ? cdbTerminator : cdbRead;
         struct TransportResult res;
 
-        rc = sessionExecCdb(pSession, pCdb, 10, MS_DIR_IN, pRow, (size_t)plan.rowLen, SESSION_READ_TIMEOUT_MS, &res);
-        if (rc != MS_OK)
+        rc = sessionExecCdb(pSession, pCdb, 10, MS_DIR_IN, pWireRow, (size_t)plan.rowBytes, SESSION_READ_TIMEOUT_MS,
+                            &res);
+
+        if ((rc != MS_OK) || (res.status != MS_SCSI_GOOD) || (res.resid != 0))
         {
-            frameTruncate(pFrame, row, plan.rowLen);
-            if (isTerminator)
-            {
-                // data rows are complete; the terminator row is padding
-                pFrame->terminatorFailed = true;
-                free(pRow);
-                return MS_OK;
-            }
-            free(pRow);
-            return rc;
-        }
-        if (res.status != MS_SCSI_GOOD)
-        {
-            frameTruncate(pFrame, row, plan.rowLen);
+            frameTruncate(pFrame, row, plan.rowBytes);
+
+            // data rows are complete; a short terminator row is only padding
             if (isTerminator)
             {
                 pFrame->terminatorFailed = true;
-                free(pRow);
+                free(pWireRow);
                 return MS_OK;
             }
-            free(pRow);
-            return MS_ERR_PROTO;
-        }
-        if (res.resid != 0)
-        {
-            frameTruncate(pFrame, row, plan.rowLen);
-            free(pRow);
-            return MS_ERR_PROTO;
+
+            free(pWireRow);
+            return (rc != MS_OK) ? rc : MS_ERR_PROTO;
         }
 
-        rc = imageUnpackRow(pFrame, row, pRow, (size_t)plan.rowLen);
+        rc = imageUnpackRow(pFrame, row, pWireRow, (size_t)plan.rowBytes);
+
         if (rc != MS_OK)
         {
-            frameTruncate(pFrame, row, plan.rowLen);
-            free(pRow);
+            frameTruncate(pFrame, row, plan.rowBytes);
+            free(pWireRow);
             return rc;
         }
-        if (pSession->pProgress != NULL)
+
+        if (pSession->pProgress != nullptr)
         {
             pSession->pProgress(pSession->pProgressCtx, MS_PHASE_SCAN, row + 1, plan.rows);
         }
+
         if (pSession->cancelRequested)
         {
-            free(pRow);
+            frameTruncate(pFrame, row + 1, plan.rowBytes);
+            free(pWireRow);
             return MS_ERR;
         }
     }
 
-    free(pRow);
+    free(pWireRow);
     return MS_OK;
 }
 
-static int sessionArm(struct Session *pSession, const struct Descriptor *pArm)
+/**
+ * @brief perform arming handshake
+ *
+ * @param pSession pointer to active session
+ * @param pArm pointer to arming descriptor
+ * @return int status code
+ */
+static int runArming(struct Session *pSession, const struct Descriptor *pArm)
 {
-    uint8_t buf[8];
-    size_t  bufLen;
-    int     rc;
-    int     turRc = MS_ERR_NOT_READY;
+    int turRc = MS_ERR_NOT_READY;
 
-    rc = sessionWriteDescriptor(pSession, pArm);
+    int rc = sessionWriteDescriptor(pSession, pArm);
+
     if (rc != MS_OK)
     {
         return rc;
     }
 
-    bufLen = protoPage28Select(0x06, 0x00, buf);
-    if (bufLen == 0)
+    uint8_t page28[8];
+    size_t  page28Len = protoPage28Select(0x06, 0x00, page28); // state 6 == arming
+
+    if (page28Len == 0)
     {
         return MS_ERR_RANGE;
     }
-    rc = sessionModeSelect(pSession, buf, bufLen);
+
+    rc = sessionModeSelect(pSession, page28, page28Len);
+
     if (rc != MS_OK)
     {
         return rc;
     }
 
-    for (int attempt = 0; attempt < ARM_POLL_COUNT; attempt++)
+    // send up to ARM_POLL_ATTEMPTS TURs with 48ms pause; observed behaviour from DiMAGE SCAN
+    for (int attempt = 0; attempt < ARM_POLL_ATTEMPTS; attempt++)
     {
-        uint8_t                cdb[6];
+        uint8_t                cdbRead[6];
         struct TransportResult res;
-        size_t                 cdbLen = protoCDBTUR(cdb);
+        size_t                 cdbLen = protoCDBTUR(cdbRead);
 
-        turRc = transportExec(pSession->pTransport, cdb, cdbLen, MS_DIR_NONE, NULL, 0, SESSION_READ_TIMEOUT_MS, &res);
+        turRc = transportExec(pSession->pTransport, cdbRead, cdbLen, MS_DIR_NONE, nullptr, 0, SESSION_READ_TIMEOUT_MS,
+                              &res);
+
         if ((turRc == MS_OK) && (res.status == MS_SCSI_GOOD))
         {
+            // unit ready; break
             turRc = MS_OK;
             break;
         }
+
         (void)timeSleepMs(ARM_POLL_MS);
     }
+
     if (turRc != MS_OK)
     {
         return turRc;
     }
 
-    return sessionReadParam(pSession, MS_SEL_ARM, MS_WORD_ARM_READBACK, buf, sizeof buf);
+    uint8_t readback[8];
+
+    return sessionReadParam(pSession, MS_SEL_ARM, MS_WORD_ARM_READBACK, readback, sizeof readback);
 }
 
+/**
+ * @brief validate all parameters; last stage before executing job
+ *
+ * @param pSession pointer to active session
+ * @param pAcquisition pointer to active acquisition context
+ * @return int status code
+ */
 static int validateAcquisition(const struct Session *pSession, const struct Acquisition *pAcquisition)
 {
     unsigned maxGroup;
 
-    if ((pSession == NULL) || (pAcquisition == NULL))
+    if ((pSession == nullptr) || (pAcquisition == nullptr))
     {
         return MS_ERR_RANGE;
     }
+
     if ((pAcquisition->job != MS_JOB_PRESCAN) && (pAcquisition->job != MS_JOB_SCAN))
     {
         return MS_ERR_RANGE;
     }
+
     switch (pAcquisition->div)
     {
         case 1:
@@ -269,27 +302,33 @@ static int validateAcquisition(const struct Session *pSession, const struct Acqu
         default:
             return MS_ERR_RANGE;
     }
+
     if ((pAcquisition->job == MS_JOB_PRESCAN) && (pAcquisition->div != 8))
     {
         return MS_ERR_RANGE;
     }
+
     if (sessionMaxFrameGroup(pSession->carrier.type, &maxGroup) != MS_OK)
     {
         return MS_ERR_RANGE;
     }
+
     // 0 means "leave the current group alone"; anything else must be addressable
     if (pAcquisition->frameGroup > maxGroup)
     {
         return MS_ERR_RANGE;
     }
+
     if (pAcquisition->slot > 1)
     {
         return MS_ERR_RANGE;
     }
+
     if ((pAcquisition->focus < SESSION_FOCUS_MIN) || (pAcquisition->focus > SESSION_FOCUS_MAX))
     {
         return MS_ERR_RANGE;
     }
+
     switch (pAcquisition->readPasses)
     {
         case 0:
@@ -305,7 +344,14 @@ static int validateAcquisition(const struct Session *pSession, const struct Acqu
     return MS_OK;
 }
 
-static int acquireFail(const char *szStep, int rc)
+/**
+ * @brief log helper for acquisition failures
+ *
+ * @param szStep string representation of failed step
+ * @param rc return code from failing stage
+ * @return int @ref rc
+ */
+static int acquireError(const char *szStep, int rc)
 {
     minscanLog(MS_LOG_ERROR, "acquire: %s: %s", szStep, errToString(rc));
     return rc;
@@ -313,11 +359,11 @@ static int acquireFail(const char *szStep, int rc)
 
 int sessionAcquire(struct Session *pSession, const struct Acquisition *pAcquisition, struct Frame *pFrame)
 {
-    struct Descriptor job;
-    struct Descriptor arm;
+    struct Descriptor jobDescriptor;
+    struct Descriptor armDescriptor;
     int               rc;
 
-    if ((pSession == NULL) || (pSession->pTransport == NULL) || (pFrame == NULL))
+    if ((pSession == nullptr) || (pSession->pTransport == nullptr) || (pFrame == nullptr))
     {
         return MS_ERR_RANGE;
     }
@@ -326,19 +372,19 @@ int sessionAcquire(struct Session *pSession, const struct Acquisition *pAcquisit
     rc = validateAcquisition(pSession, pAcquisition);
     if (rc != MS_OK)
     {
-        return acquireFail("validation", rc);
+        return acquireError("validation", rc);
     }
 
     rc = sessionWaitReady(pSession, 60u * TIME_PER_SEC);
     if (rc != MS_OK)
     {
-        return acquireFail("wait ready", rc);
+        return acquireError("wait ready", rc);
     }
 
     rc = sessionCheckCarrier(pSession);
     if (rc != MS_OK)
     {
-        return acquireFail("carrier check", rc);
+        return acquireError("carrier check", rc);
     }
 
     if (!pSession->isCalibrated)
@@ -347,70 +393,68 @@ int sessionAcquire(struct Session *pSession, const struct Acquisition *pAcquisit
 
         if (rc != MS_OK)
         {
-            return acquireFail("calibrate", rc);
+            return acquireError("calibrate", rc);
         }
     }
 
     if (sessionSatIsZero(sessionSatFor(pSession, pSession->carrier.type)))
     {
-        rc = sessionReadSat(pSession);
+        rc = sessionReadSatExpTime(pSession);
         if (rc != MS_OK)
         {
-            return acquireFail("read Sat", rc);
+            return acquireError("read Sat", rc);
         }
     }
 
     // derive exposure before moving anything; bad Sat/EV must fail early
     struct Exposure exposure;
 
-    rc = sessionDeriveExposure(pSession, pAcquisition, pAcquisition->job == MS_JOB_PRESCAN, &exposure);
+    rc = sessionDeriveExposure(pSession, pAcquisition, &exposure);
     if (rc != MS_OK)
     {
-        return acquireFail("derive exposure", rc);
+        return acquireError("derive exposure", rc);
     }
 
-    // the caller owns stage selection (and any focus that follows a stage
-    // change); acquire only selects the frame group and runs the job
     if (pAcquisition->frameGroup != 0)
     {
         rc = sessionSetFrameGroup(pSession, pAcquisition->frameGroup);
         if (rc != MS_OK)
         {
             sessionQuiesceUnlessTimeout(pSession, rc);
-            return acquireFail("frame group", rc);
+            return acquireError("frame group", rc);
         }
     }
 
     // build after the frame write so the descriptor sees the final state
-    rc = sessionBuildJobDescriptor(pSession, pAcquisition, pAcquisition->job, &exposure, &job);
+    rc = sessionBuildJobDescriptor(pSession, pAcquisition, pAcquisition->job, &exposure, &jobDescriptor);
     if (rc != MS_OK)
     {
         sessionQuiesceUnlessTimeout(pSession, rc);
-        return acquireFail("build job", rc);
+        return acquireError("build job", rc);
     }
     if (pAcquisition->job == MS_JOB_SCAN)
     {
-        rc = sessionBuildJobDescriptor(pSession, pAcquisition, MS_JOB_ARM, &exposure, &arm);
+        rc = sessionBuildJobDescriptor(pSession, pAcquisition, MS_JOB_ARM, &exposure, &armDescriptor);
         if (rc != MS_OK)
         {
             sessionQuiesceUnlessTimeout(pSession, rc);
-            return acquireFail("build arm", rc);
+            return acquireError("build arm", rc);
         }
 
-        // poll immediately before the 24 write; frame/group steps can leave
-        // the mechanism busy even when the earlier TUR was GOOD
+        // poll immediately before the 24 write as frame/group steps can leave the mechanism busy even when the earlier
+        // TUR was GOOD
         rc = sessionWaitReady(pSession, 60u * TIME_PER_SEC);
         if (rc != MS_OK)
         {
             sessionQuiesceUnlessTimeout(pSession, rc);
-            return acquireFail("wait ready (arm)", rc);
+            return acquireError("wait ready (arm)", rc);
         }
 
-        rc = sessionArm(pSession, &arm);
+        rc = runArming(pSession, &armDescriptor);
         if (rc != MS_OK)
         {
             sessionQuiesceUnlessTimeout(pSession, rc);
-            return acquireFail("arm", rc);
+            return acquireError("arm", rc);
         }
     }
 
@@ -418,27 +462,27 @@ int sessionAcquire(struct Session *pSession, const struct Acquisition *pAcquisit
     if (rc != MS_OK)
     {
         sessionQuiesceUnlessTimeout(pSession, rc);
-        return acquireFail("wait ready (job)", rc);
+        return acquireError("wait ready (job)", rc);
     }
 
-    rc = sessionWriteDescriptor(pSession, &job);
+    rc = sessionWriteDescriptor(pSession, &jobDescriptor);
     if (rc != MS_OK)
     {
         sessionQuiesceUnlessTimeout(pSession, rc);
-        return acquireFail("write job", rc);
+        return acquireError("write job", rc);
     }
 
-    rc = sessionReadBurst(pSession, &job, pAcquisition, pFrame);
+    rc = readBurst(pSession, &jobDescriptor, pAcquisition, pFrame);
     if (rc != MS_OK)
     {
         sessionQuiesceUnlessTimeout(pSession, rc);
-        return acquireFail("burst", rc);
+        return acquireError("burst", rc);
     }
 
     rc = sessionQuiesce(pSession);
     if (rc != MS_OK)
     {
-        return acquireFail("park", rc);
+        return acquireError("park", rc);
     }
     return MS_OK;
 }

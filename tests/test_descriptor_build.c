@@ -1,7 +1,7 @@
-#include "src/core/scan/job.h"
-#include "src/core/wire/descriptor.h"
 #include "minscan/error.h"
 #include "minscan/exposure.h"
+#include "src/core/scan/job.h"
+#include "src/core/wire/descriptor.h"
 #include "test.h"
 
 #include <stdio.h>
@@ -135,7 +135,7 @@ static int readGolden(const char *szFile, struct Descriptor *pDescriptorOut)
     snprintf(szPath, sizeof szPath, "%s/%s", MS_TESTDATA_DIR, szFile);
 
     pFile = fopen(szPath, "rb");
-    if (pFile == NULL)
+    if (pFile == nullptr)
     {
         fprintf(stderr, "cannot open golden %s\n", szPath);
         return 1;

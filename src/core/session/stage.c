@@ -1,7 +1,7 @@
 /**
  * @file stage.c
  * @author your name (you@domain.com)
- * @brief
+ * @brief lens-stage and frame-group selection
  * @version 0.1
  * @date 18-11-2026
  *
@@ -13,89 +13,97 @@
 #include "minscan/error.h"
 #include "src/core/scan/window.h"
 
-int sessionSetLensStage(struct Session *pSession)
+int sessionSelectLensStage(struct Session *pSession)
 {
-    uint8_t  buf[11];
-    uint16_t want;
-    size_t   bufLen;
-    int      rc;
+    if (pSession == nullptr)
+    {
+        return MS_ERR_RANGE;
+    }
 
-    if (!pSession || !pSession->pTransport)
+    if (pSession->pTransport == nullptr)
     {
         return MS_ERR_UNINITIALIZED;
     }
 
-    want = (uint16_t)scanStageDPI(pSession->carrier.type);
+    uint16_t targetDPI = (uint16_t)scanStageDPI(pSession->carrier.type);
+    uint8_t  pageBuf[SESSION_PAGE25_READ_LEN];
 
-    // read the live stage first: page 0x25 is time-varying (3200 until a
-    // 35 mm frame resolves, 4800 after), so the cached value is not enough
-    if (sessionModeSense(pSession, MS_PAGE_LENS, 0x0b, buf, sizeof buf) != MS_OK ||
-        protoPage25Parse(buf, sizeof buf, &pSession->page25) != MS_OK)
+    if (sessionModeSense(pSession, MS_PAGE_LENS, (uint8_t)SESSION_PAGE25_READ_LEN, pageBuf, sizeof pageBuf) != MS_OK ||
+        protoPage25Parse(pageBuf, sizeof pageBuf, &pSession->page25) != MS_OK)
     {
         return MS_ERR_PROTO;
     }
 
-    if (pSession->page25.maxDPI == want)
+    if (pSession->page25.maxDPI == targetDPI)
     {
-        pSession->dpi   = want;
+        pSession->dpi   = targetDPI;
         pSession->focus = pSession->page25.focus;
         return MS_OK;
     }
 
-    bufLen = protoPage25Select(want, 0, buf);
-    if (bufLen == 0)
+    size_t pageLen = protoPage25Select(targetDPI, 0, pageBuf);
+
+    if (pageLen == 0)
     {
         return MS_ERR_RANGE;
     }
 
-    rc = sessionModeSelect(pSession, buf, bufLen);
+    int rc = sessionModeSelect(pSession, pageBuf, pageLen);
+
     if (rc != MS_OK)
     {
         return rc;
     }
 
-    if (sessionModeSense(pSession, MS_PAGE_LENS, 0x0b, buf, sizeof buf) != MS_OK ||
-        protoPage25Parse(buf, sizeof buf, &pSession->page25) != MS_OK)
+    if (sessionModeSense(pSession, MS_PAGE_LENS, (uint8_t)SESSION_PAGE25_READ_LEN, pageBuf, sizeof pageBuf) != MS_OK ||
+        protoPage25Parse(pageBuf, sizeof pageBuf, &pSession->page25) != MS_OK)
     {
-        return MS_ERR_PROTO;
-    }
-    if (pSession->page25.maxDPI != want)
-    {
-        minscanLog(MS_LOG_ERROR, "lens: readback maxDPI=%u, want %u", pSession->page25.maxDPI, want);
         return MS_ERR_PROTO;
     }
 
-    pSession->dpi   = want;
+    if (pSession->page25.maxDPI != targetDPI)
+    {
+        minscanLog(MS_LOG_ERROR, "lens: readback maxDPI=%u, want %u", pSession->page25.maxDPI, targetDPI);
+        return MS_ERR_PROTO;
+    }
+
+    pSession->dpi   = targetDPI;
     pSession->focus = pSession->page25.focus;
     return MS_OK;
 }
 
-int sessionSetFrameGroup(struct Session *pSession, unsigned group)
+int sessionSetFrameGroup(struct Session *pSession, unsigned frameGroup)
 {
-    uint8_t  buf[9];
-    size_t   bufLen;
-    unsigned maxGroup;
-    int      rc;
-
-    if (!pSession || !pSession->pTransport)
-    {
-        return MS_ERR_UNINITIALIZED;
-    }
-
-    rc = sessionMaxFrameGroup(pSession->carrier.type, &maxGroup);
-    if (rc != MS_OK)
-    {
-        return rc;
-    }
-    // 0 is not a frame position; writing it walks the carrier into the end stop
-    if ((group == 0) || (group > maxGroup))
+    if (pSession == nullptr)
     {
         return MS_ERR_RANGE;
     }
 
+    if (pSession->pTransport == nullptr)
+    {
+        return MS_ERR_UNINITIALIZED;
+    }
+
+    unsigned maxGroup;
+
+    int rc = sessionMaxFrameGroup(pSession->carrier.type, &maxGroup);
+
+    if (rc != MS_OK)
+    {
+        return rc;
+    }
+
+    // 0 is not a frame position; writing it rams the carrier into the casing
+    if ((frameGroup == 0) || (frameGroup > maxGroup))
+    {
+        return MS_ERR_RANGE;
+    }
+
+    uint8_t pageBuf[SESSION_PAGE24_READ_LEN];
+
     // verify the carrier on the wire before moving anything
-    if (sessionModeSense(pSession, MS_PAGE_FRAME, 0x09, buf, sizeof buf) != MS_OK ||
-        protoPage24Parse(buf, sizeof buf, &pSession->page24) != MS_OK)
+    if (sessionModeSense(pSession, MS_PAGE_FRAME, (uint8_t)SESSION_PAGE24_READ_LEN, pageBuf, sizeof pageBuf) != MS_OK ||
+        protoPage24Parse(pageBuf, sizeof pageBuf, &pSession->page24) != MS_OK)
     {
         return MS_ERR_PROTO;
     }
@@ -109,39 +117,43 @@ int sessionSetFrameGroup(struct Session *pSession, unsigned group)
         return MS_ERR_PROTO;
     }
 
-    if (pSession->page24.frameGroup == group)
+    if (pSession->page24.frameGroup == frameGroup)
     {
-        pSession->frameGroup = group;
+        pSession->frameGroup = frameGroup;
         return MS_OK;
     }
 
-    bufLen = protoPage24Select((uint8_t)group, buf);
-    if (bufLen == 0)
+    size_t pageLen = protoPage24Select((uint8_t)frameGroup, pageBuf);
+
+    if (pageLen == 0)
     {
         return MS_ERR_RANGE;
     }
 
-    rc = sessionModeSelect(pSession, buf, bufLen);
+    rc = sessionModeSelect(pSession, pageBuf, pageLen);
+
     if (rc != MS_OK)
     {
         return rc;
     }
 
-    if (sessionModeSense(pSession, MS_PAGE_FRAME, 0x09, buf, sizeof buf) != MS_OK ||
-        protoPage24Parse(buf, sizeof buf, &pSession->page24) != MS_OK)
+    if (sessionModeSense(pSession, MS_PAGE_FRAME, (uint8_t)SESSION_PAGE24_READ_LEN, pageBuf, sizeof pageBuf) != MS_OK ||
+        protoPage24Parse(pageBuf, sizeof pageBuf, &pSession->page24) != MS_OK)
     {
         return MS_ERR_PROTO;
     }
-    if (pSession->page24.frameGroup != group)
+
+    if (pSession->page24.frameGroup != frameGroup)
     {
-        minscanLog(MS_LOG_ERROR, "frame: readback group %u, want %u", pSession->page24.frameGroup, group);
+        minscanLog(MS_LOG_ERROR, "frame: readback group %u, want %u", pSession->page24.frameGroup, frameGroup);
         return MS_ERR_PROTO;
     }
+
     if (sessionCarrierForMediaCode(pSession->page24.media, &observed) != MS_OK || observed != pSession->carrier.type)
     {
         return MS_ERR_PROTO;
     }
 
-    pSession->frameGroup = group;
+    pSession->frameGroup = frameGroup;
     return MS_OK;
 }

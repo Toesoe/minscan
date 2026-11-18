@@ -55,15 +55,11 @@ enum ProtoSelector
 };
 
 // 28/<selector>/<word> addresses; pass selector and word to protoCDBRead()
-#define MS_WORD_SAT_35       0x0004 ///< 28/81/0004 SatExpTime R,G,B,IR
-#define MS_WORD_SAT_120      0x0009 ///< 28/81/0009 SatExpTime R,G,B,IR
 #define MS_WORD_ARM_READBACK 0x0004 ///< 28/82/0004 arming readback
 #define MS_WORD_PAGE25_ECHO  0x0000 ///< 28/85/0000 page 0x25 echo
 #define MS_WORD_INIT_BANK0   0x0000 ///< 28/83/0000 factory table bank 0
 #define MS_WORD_INIT_BANK1   0x0001 ///< 28/83/0001 factory table bank 1
 
-#define MS_WORD_FOCUS        0x7f00 ///< focus measurement read
-#define MS_WORD_FOCUS_OPEN   0xff00 ///< low-exposure focus opener
 #define MS_WORD_DATA_BASE    0x8a00 ///< image read: base high byte
 #define MS_WORD_DATA_COLOUR  0x0500 ///< image read: colour bit
 #define MS_WORD_DATA_SCAN    0x7000 ///< image read: full-scan bit

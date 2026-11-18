@@ -1,7 +1,7 @@
 /**
  * @file io.c
  * @author your name (you@domain.com)
- * @brief
+ * @brief session-level SCSI I/O: retries, mode pages, descriptor write, quiesce and park
  * @version 0.1
  * @date 18-11-2026
  *
@@ -19,19 +19,28 @@
 #define IO_RETRY_LIMIT        200
 #define IO_RETRY_MS           100u
 
+#define MODE_TIMEOUT_MS       5000u
 #define DESC_WRITE_TIMEOUT_MS 10000u
+#define PARK_TIMEOUT_MS       10000u
 
-int sessionScsiError(const char *szWhat, const struct TransportResult *pRes)
+#define IDLE_POLL_MS          100u
+#define IDLE_TIMEOUT_MS       (10u * TIME_PER_SEC)
+
+#define STATUS_IDLE           0x0000u
+#define STATUS_UNKNOWN        0xffffu
+
+int sessionLogScsiError(const char *szOperation, const struct TransportResult *pRes)
 {
-    if (pRes->status == MS_SCSI_CHECK_CONDITION && pRes->senseLen >= 14)
+    if (pRes->status == MS_SCSI_CHECK_CONDITION && pRes->senseLen >= SESSION_SENSE_FIXED_LEN)
     {
-        minscanLog(MS_LOG_ERROR, "%s: CHECK CONDITION key=%02x asc=%02x ascq=%02x", szWhat, pRes->sense[2] & 0x0fu,
+        minscanLog(MS_LOG_ERROR, "%s: CHECK CONDITION key=%02x asc=%02x ascq=%02x", szOperation, pRes->sense[2] & 0x0fu,
                    pRes->sense[12], pRes->sense[13]);
     }
     else
     {
-        minscanLog(MS_LOG_ERROR, "%s: status=%02x resid=%d", szWhat, pRes->status, pRes->resid);
+        minscanLog(MS_LOG_ERROR, "%s: status=%02x resid=%d", szOperation, pRes->status, pRes->resid);
     }
+
     return MS_ERR_PROTO;
 }
 
@@ -50,85 +59,93 @@ int sessionExecCdb(struct Session *pSession, const uint8_t *pCdb, size_t cdbLen,
             (void)timeSleepMs(IO_RETRY_MS);
             continue;
         }
+
         if (rc != MS_OK)
         {
             return rc;
         }
+
         if (pRes->status == MS_SCSI_GOOD)
         {
             return MS_OK;
         }
+
         if (pRes->status == MS_SCSI_BUSY)
         {
             (void)timeSleepMs(IO_RETRY_MS);
             continue;
         }
-        if ((pRes->status == MS_SCSI_CHECK_CONDITION) && (pRes->senseLen >= 14))
+
+        if ((pRes->status == MS_SCSI_CHECK_CONDITION) && (pRes->senseLen >= SESSION_SENSE_FIXED_LEN))
         {
-            uint8_t key  = pRes->sense[2] & 0x0fu;
-            uint8_t asc  = pRes->sense[12];
-            uint8_t ascq = pRes->sense[13];
+            uint8_t  key  = pRes->sense[2] & 0x0fu;
+            uint16_t code = (uint16_t)(((uint16_t)pRes->sense[12] << 8) | pRes->sense[13]);
 
             if (key == MS_SK_UNIT_ATTENTION)
             {
                 continue; // command did not run
             }
-            if ((key == MS_SK_NOT_READY) && (asc == 0x04u) && (ascq == 0x01u))
+
+            if ((key == MS_SK_NOT_READY) && (code == MS_SC_NOT_READY_BECOMING_READY))
             {
                 (void)timeSleepMs(IO_RETRY_MS);
                 continue;
             }
         }
+
         return MS_OK; // hard condition; caller logs it
     }
+
     return MS_ERR_NOT_READY;
 }
 
-int sessionModeSense(struct Session *pSession, uint8_t page, uint8_t alloc, uint8_t *pBuf, size_t len)
+int sessionModeSense(struct Session *pSession, uint8_t page, uint8_t allocLen, uint8_t *pBuf, size_t len)
 {
-    uint8_t                cdb[6];
-    struct TransportResult res;
-    size_t                 cdbLen;
-    int                    rc;
-
-    if ((pSession == NULL) || (pBuf == NULL) || (len == 0) || (len > 0xffu))
+    if ((pSession == nullptr) || (pBuf == nullptr) || (len == 0) || (len > 0xffu))
     {
         return MS_ERR_RANGE;
     }
-    cdbLen = protoCDBModeSense(page, alloc, cdb);
-    rc     = sessionExecCdb(pSession, cdb, cdbLen, MS_DIR_IN, pBuf, len, 5000, &res);
+
+    uint8_t                cdb[6];
+    struct TransportResult res;
+    size_t                 cdbLen = protoCDBModeSense(page, allocLen, cdb);
+    int                    rc     = sessionExecCdb(pSession, cdb, cdbLen, MS_DIR_IN, pBuf, len, MODE_TIMEOUT_MS, &res);
+
     if (rc != MS_OK)
     {
         return rc;
     }
+
     if (res.status != MS_SCSI_GOOD || res.resid != 0)
     {
-        return sessionScsiError("mode sense", &res);
+        return sessionLogScsiError("mode sense", &res);
     }
+
     return MS_OK;
 }
 
 int sessionModeSelect(struct Session *pSession, uint8_t *pData, size_t len)
 {
-    uint8_t                cdb[6];
-    struct TransportResult res;
-    size_t                 cdbLen;
-    int                    rc;
-
-    if ((pSession == NULL) || (pData == NULL) || (len == 0) || (len > 0xffu))
+    if ((pSession == nullptr) || (pData == nullptr) || (len == 0) || (len > 0xffu))
     {
         return MS_ERR_RANGE;
     }
-    cdbLen = protoCDBModeSelect((uint8_t)len, cdb);
-    rc     = sessionExecCdb(pSession, cdb, cdbLen, MS_DIR_OUT, pData, len, 5000, &res);
+
+    uint8_t                cdb[6];
+    struct TransportResult res;
+    size_t                 cdbLen = protoCDBModeSelect((uint8_t)len, cdb);
+    int                    rc = sessionExecCdb(pSession, cdb, cdbLen, MS_DIR_OUT, pData, len, MODE_TIMEOUT_MS, &res);
+
     if (rc != MS_OK)
     {
         return rc;
     }
+
     if (res.status != MS_SCSI_GOOD || res.resid != 0)
     {
-        return sessionScsiError("mode select", &res);
+        return sessionLogScsiError("mode select", &res);
     }
+
     return MS_OK;
 }
 
@@ -136,48 +153,52 @@ int sessionWriteDescriptor(struct Session *pSession, const struct Descriptor *pD
 {
     uint8_t                cdb[10];
     struct TransportResult res;
-    size_t                 cdbLen;
-    int                    rc;
+    size_t                 cdbLen = protoCDBWrite(DESC_LEN, cdb);
 
-    cdbLen = protoCDBWrite(DESC_LEN, cdb);
     if (cdbLen == 0)
     {
         return MS_ERR_RANGE;
     }
-    rc = sessionExecCdb(pSession, cdb, cdbLen, MS_DIR_OUT, (uint8_t *)pDescriptor->raw, DESC_LEN,
-                        DESC_WRITE_TIMEOUT_MS, &res);
+
+    int rc = sessionExecCdb(pSession, cdb, cdbLen, MS_DIR_OUT, (uint8_t *)pDescriptor->raw, DESC_LEN,
+                            DESC_WRITE_TIMEOUT_MS, &res);
+
     if (rc != MS_OK)
     {
         return rc;
     }
+
     if (res.status != MS_SCSI_GOOD || res.resid != 0)
     {
-        return sessionScsiError("write descriptor", &res);
+        return sessionLogScsiError("write descriptor", &res);
     }
+
     return MS_OK;
 }
 
-int sessionReadParam(struct Session *pSession, uint8_t sel, uint16_t word, uint8_t *pBuf, size_t len)
+int sessionReadParam(struct Session *pSession, uint8_t selector, uint16_t word, uint8_t *pBuf, size_t len)
 {
     uint8_t                cdb[10];
     struct TransportResult res;
-    size_t                 cdbLen;
-    int                    rc;
+    size_t                 cdbLen = protoCDBRead(selector, word, (uint32_t)len, cdb);
 
-    cdbLen = protoCDBRead(sel, word, (uint32_t)len, cdb);
     if (cdbLen == 0)
     {
         return MS_ERR_RANGE;
     }
-    rc = sessionExecCdb(pSession, cdb, cdbLen, MS_DIR_IN, pBuf, len, SESSION_READ_TIMEOUT_MS, &res);
+
+    int rc = sessionExecCdb(pSession, cdb, cdbLen, MS_DIR_IN, pBuf, len, SESSION_READ_TIMEOUT_MS, &res);
+
     if (rc != MS_OK)
     {
         return rc;
     }
+
     if (res.status != MS_SCSI_GOOD || res.resid != 0)
     {
-        return sessionScsiError("parameter read", &res);
+        return sessionLogScsiError("parameter read", &res);
     }
+
     return MS_OK;
 }
 
@@ -185,10 +206,10 @@ int sessionQuiesce(struct Session *pSession)
 {
     uint8_t                cdb[6];
     struct TransportResult res;
-    size_t                 cdbLen;
+    size_t                 cdbLen = protoCDBTUR(cdb);
 
-    cdbLen = protoCDBTUR(cdb);
-    (void)transportExec(pSession->pTransport, cdb, cdbLen, MS_DIR_NONE, NULL, 0, SESSION_READ_TIMEOUT_MS, &res);
+    (void)transportExec(pSession->pTransport, cdb, cdbLen, MS_DIR_NONE, nullptr, 0, SESSION_READ_TIMEOUT_MS, &res);
+
     return sessionPark(pSession);
 }
 
@@ -203,29 +224,32 @@ void sessionQuiesceUnlessTimeout(struct Session *pSession, int rc)
 
 int sessionWaitIdle(struct Session *pSession, unsigned timeoutMs)
 {
-    struct TimeDeadline deadline;
-    uint8_t             buf[8];
-    int                 lastRc     = MS_OK;
-    uint16_t            lastStatus = 0xffffu;
-
     if (timeoutMs == 0)
     {
-        timeoutMs = 10u * TIME_PER_SEC;
+        timeoutMs = IDLE_TIMEOUT_MS;
     }
+
+    struct TimeDeadline deadline;
+
     if (timeDeadlineAfter(timeoutMs, &deadline) != MS_OK)
     {
         return MS_ERR_IO;
     }
 
+    uint8_t  buf[SESSION_PAGE28_READ_LEN];
+    int      lastRc     = MS_OK;
+    uint16_t lastStatus = STATUS_UNKNOWN;
+
     while (!timeIsDeadlineExpired(&deadline))
     {
-        int rc = sessionModeSense(pSession, MS_PAGE_JOB, 0x08, buf, sizeof buf);
+        int rc = sessionModeSense(pSession, MS_PAGE_JOB, (uint8_t)SESSION_PAGE28_READ_LEN, buf, sizeof buf);
 
         if (rc == MS_OK && protoPage28Parse(buf, sizeof buf, &pSession->page28) == MS_OK)
         {
             lastRc     = MS_OK;
             lastStatus = pSession->page28.status;
-            if (lastStatus == 0x0000u)
+
+            if (lastStatus == STATUS_IDLE)
             {
                 return MS_OK;
             }
@@ -234,27 +258,29 @@ int sessionWaitIdle(struct Session *pSession, unsigned timeoutMs)
         {
             lastRc = (rc != MS_OK) ? rc : MS_ERR_PROTO;
         }
-        (void)timeSleepMs(100);
+
+        (void)timeSleepMs(IDLE_POLL_MS);
     }
 
     if (lastRc != MS_OK)
     {
         return lastRc;
     }
+
     minscanLog(MS_LOG_DEBUG, "wait idle: page 0x28 status 0x%04x", lastStatus);
     return MS_ERR_NOT_READY;
 }
 
 int sessionPark(struct Session *pSession)
 {
-    uint8_t                cdb[10];
-    struct TransportResult res;
-    size_t                 n;
-
-    if (pSession == NULL || pSession->pTransport == NULL)
+    if (pSession == nullptr || pSession->pTransport == nullptr)
     {
         return MS_ERR_RANGE;
     }
-    n = protoCDBVendor31(MS_V31_PARK, cdb);
-    return transportExec(pSession->pTransport, cdb, n, MS_DIR_NONE, NULL, 0, 10000, &res);
+
+    uint8_t                cdb[10];
+    struct TransportResult res;
+    size_t                 n = protoCDBVendor31(MS_V31_PARK, cdb);
+
+    return transportExec(pSession->pTransport, cdb, n, MS_DIR_NONE, nullptr, 0, PARK_TIMEOUT_MS, &res);
 }

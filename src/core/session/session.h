@@ -26,7 +26,7 @@ struct LoadedCarrier
 {
     enum Carrier  type;       ///< 35mm or 120
     enum FilmType film;       ///< host-side film identity (color neg/pos, b/w)
-    uint16_t      formatCode; ///< vendor format code; 0 = default for @ref media
+    uint16_t      formatCode; ///< vendor format code; 0 = default for @ref Carrier
     bool          glassless;  ///< glassless carrier/insert (only applicable for 120)
     int           uniA;       ///< UniA (multi-format) holder/insert
     double        ev;         ///< default manual exposure offset
@@ -85,57 +85,160 @@ struct Session
     volatile bool     cancelRequested; ///< set by the caller to abort a running scan
 };
 
-/** @brief one acquired frame, planar layout */
-
-/** @brief bind a transport/carrier, wait ready, and cache device state */
+/**
+ * @brief bind a transport and carrier, wait for the device, and cache its state
+ *
+ * @param pSession session to initialise; zeroed and populated here
+ * @param pTransport open transport; borrowed, not owned
+ * @param pCarrier carrier configuration; copied into the session
+ * @return int status code
+ *
+ * @note resolves the format row, waits ready, reads pages 0x24/0x25/0x28, verifies that the observed carrier matches @p
+ *       pCarrier, then reads SatExpTime. call before any other session operation
+ */
 int sessionInit(struct Session *pSession, struct Transport *pTransport, struct LoadedCarrier *pCarrier);
 
+/**
+ * @brief poll TUR until the mechanism is ready
+ *
+ * @param pSession pointer to active session
+ * @param timeoutMs overall timeout; 0 = 60 s
+ * @return int status code; MS_ERR_NOT_READY on timeout or a hard sense
+ *
+ * @note talks to the transport directly instead of sessionExecCdb so it owns the retry policy: busy, unit-attention and
+ *       becoming-ready are retried, anything else returns immediately
+ */
 int sessionWaitReady(struct Session *pSession, unsigned timeoutMs);
-int sessionReadPages(struct Session *pSession);
 
-int               sessionReadSat(struct Session *pSession);
+/**
+ * @brief read and cache pages 0x24, 0x25 and 0x28
+ *
+ * @param pSession pointer to active session
+ * @return int status code, MS_ERR_PROTO if a page cannot be read or parsed
+ */
+int sessionRefreshPages(struct Session *pSession);
+
+/**
+ * @brief read both SatExpTime quadruples into the session
+ *
+ * @param pSession pointer to active session
+ * @return int status code
+ *
+ * @note reads the 35 mm and 120 selectors unconditionally as the device re-measures these during calibration, so
+ *       refresh after a sweep
+ */
+int sessionReadSatExpTime(struct Session *pSession);
+
+/**
+ * @brief get the cached Sat quadruple for a carrier
+ *
+ * @param pSession pointer to active session
+ * @param carrier carrier to look up
+ * @return const struct Sat* cached quadruple, or nullptr for an unknown carrier
+ */
 const struct Sat *sessionSatFor(const struct Session *pSession, enum Carrier carrier);
 
-// focus resets to 0 when the stage changes
-/** @brief select the lens stage implied by the carrier */
-int sessionSetLensStage(struct Session *pSession);
-
-/** @brief select a frame group through page 0x24 */
-int sessionSetFrameGroup(struct Session *pSession, unsigned group);
-
-/** @brief re-read the carrier and invalidate calibration if its type changed
+/**
+ * @brief select the lens stage implied by the carrier
  *
- * Eject/reinsert of the same carrier (page 0x24 reports no carrier in between)
- * does not invalidate. A 120 <-> 35 mm switch does, so the next acquire or
- * autofocus runs sessionCalibrate before scanning.
+ * @param pSession pointer to active session
+ * @return int status code
+ *
+ * @note reads page 0x25 first because the live stage can differ from the cached one (3200 until a 35 mm carrier is
+ *       inserted and enumerated, 4800 after). a stage change resets focus to 0
+ */
+int sessionSelectLensStage(struct Session *pSession);
+
+/**
+ * @brief select a frame group through page 0x24
+ *
+ * @param pSession pointer to active session
+ * @param frameGroup 1-based group, within the carrier's maximum
+ * @return int status code
+ *
+ * @note 0 is rejected, it is not a frame position and rams the carrier into the housing. the carrier is verified
+ *       against the configured type before the move
+ */
+int sessionSetFrameGroup(struct Session *pSession, unsigned frameGroup);
+
+/**
+ * @brief re-read the carrier and invalidate calibration if its type changed
+ *
+ * @param pSession pointer to active session
+ * @return int status code
+ *
+ * @note eject/reinsert of the same carrier (page 0x24 reporting no carrier in between) does not invalidate but a format
+ *       switch does, so the next acquire or autofocus recalibrates
  */
 int sessionCheckCarrier(struct Session *pSession);
 
-/** @brief run the calibration ladder
+/**
+ * @brief run the carrier-specific calibration ladder
  *
- * scanner homes the carrier and refreshes its internal dark/white shading reference. without it the
- * scanner keeps a stale reference and the linear wire retains the lamp/optics falloff (visible as edge flare after
- * inversion). needs to be run once per carrier
+ * @param pSession pointer to active session
+ * @return int status code
+ *
+ * @note the scanner homes the carrier and refreshes its internal dark/white reference. steps 03->04->05 on 120 and
+ *       06->07->08 on 35 mm, waiting ready after each state, then re-reads SatExpTime. the calibration flag is cleared
+ *       on entry and set only on success
  */
 int sessionCalibrate(struct Session *pSession);
 
-/** @brief read the 0x83 base table (4 planes x cols u16) for a carrier
+/**
+ * @brief read the 0x83 base table for the 4-plane/IR path, decimated to the scan divisor
  *
- * 0x83 contains the fixed-pattern reference used by the 4-plane/IR path; the 3-plane path does not need it
+ * @param pSession pointer to active session
+ * @param div scan divisor. the table is averaged down to cols/div columns
+ * @param [out] ppBase malloc'd 4-plane table, nullptr on failure
+ * @param [out] pCols columns per plane in @p ppBase
+ * @return int status code
+ *
+ * @note 0x83 is the per-column gain reference for the 4-plane readout; 3-plane path does not need it. free the result!
  */
-int sessionReadBase(struct Session *pSession, bool is35mm, uint16_t **ppBase, int *pCols);
+int sessionReadBase(struct Session *pSession, unsigned div, uint16_t **ppBase, int *pCols);
 
-// caller selects lens stage/focus first; free with imageFrameFreePlanes
-/** @brief run one prescan or scan */
+/**
+ * @brief run one prescan or scan
+ *
+ * @param pSession pointer to active session
+ * @param pAcquisition request: job, divisor, frame group, slot, IR, passes, focus and EV
+ * @param [out] pFrame allocated frame, zeroed on entry
+ * @return int status code
+ */
 int sessionAcquire(struct Session *pSession, const struct Acquisition *pAcquisition, struct Frame *pFrame);
 
-/** @brief run the vendor focus sweep and commit the best position */
+/**
+ * @brief run a focus sweep and commit the best position
+ *
+ * @param pSession pointer to active session
+ * @param frame 1-based frame group to measure on
+ * @param [out] pOutFocus committed focus position
+ * @return int status code
+ *
+ * @note runs the opener, a coarse sweep across the focus range, then a fine sweep around the peak. the final focus
+ *       descriptor write is the setter and is verified against page 0x25. parks on exit
+ */
 int sessionAutofocus(struct Session *pSession, unsigned frame, int16_t *pOutFocus);
 
-/** @brief measure the focus metric at one position */
-int sessionMeasureFocus(struct Session *pSession, int16_t focus, double *pOutMetric);
+/**
+ * @brief measure the focus score at one position and commit it
+ *
+ * @param pSession pointer to active session
+ * @param focus focus position to measure, within SESSION_FOCUS_MIN..MAX
+ * @param [out] pOutScore mean focus score over the reads
+ * @return int status code
+ *
+ * @note writes a focus descriptor, takes FOCUS_MEASURE_READS readings, then verifies that page 0x25
+ *       reports @p focus and stores it as the session focus. does not park
+ */
+int sessionMeasureFocus(struct Session *pSession, int16_t focus, double *pOutScore);
 
-/** @brief send the vendor park/cancel */
+/**
+ * @brief send the vendor park command
+ *
+ * @param pSession pointer to active session
+ * @return int status code
+ */
 int sessionPark(struct Session *pSession);
 
 #endif // MINSCAN_SESSION_H_

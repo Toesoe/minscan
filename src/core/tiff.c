@@ -16,7 +16,7 @@ static int pathAddSuffix(const char *szPath, const char *szSuffix, char *pOut, s
     size_t      split;
 
     // no extension, or a dotfile
-    if (szDot == NULL || szDot == szName)
+    if (szDot == nullptr || szDot == szName)
     {
         split = pathLen;
     }

@@ -1,6 +1,6 @@
-#include "src/core/wire/descriptor.h"
 #include "minscan/error.h"
 #include "src/core/scan/window.h"
+#include "src/core/wire/descriptor.h"
 #include "test.h"
 
 #include <string.h>
@@ -44,13 +44,13 @@ int main(void)
     const struct DescriptorFormat *fmt35  = scanDefaultFormatFor(MS_CARRIER_35MM);
     unsigned                       div    = 0;
 
-    CHECK(fmt120 != NULL);
+    CHECK(fmt120 != nullptr);
     CHECK(fmt120->width == 7128);
     CHECK(fmt120->height == 10560);
     CHECK(fmt120->maxDPI == 3200);
     CHECK(fmt120->rowUnitFactor == 3);
 
-    CHECK(fmt35 != NULL);
+    CHECK(fmt35 != nullptr);
     CHECK(fmt35->width == 4728);
     CHECK(fmt35->height == 7008);
     CHECK(fmt35->maxDPI == 4800);
