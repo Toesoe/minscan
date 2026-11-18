@@ -14,7 +14,9 @@
 
 #include "minscan/transport.h"
 #include "session.h"
+#include "src/core/wire/cdb.h"
 #include "src/core/wire/descriptor.h"
+#include "src/core/wire/scsi.h"
 
 #define SESSION_READ_TIMEOUT_MS 10000u
 #define SESSION_SENSE_FIXED_LEN 14u ///< fixed sense: key at +2, asc at +12, ascq at +13

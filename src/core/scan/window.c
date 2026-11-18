@@ -13,6 +13,7 @@
 
 #include "minscan/error.h"
 #include "src/core/wire/descriptor.h"
+#include "src/core/wire/scsi.h"
 
 #include <math.h>
 #include <stddef.h>
@@ -68,9 +69,9 @@ unsigned scanStageDPI(enum Carrier carrier)
 {
     if (carrier == MS_CARRIER_120)
     {
-        return DESC_MAX_DPI_120;
+        return PROTO_MAX_DPI_120;
     }
-    return DESC_MAX_DPI_35MM;
+    return PROTO_MAX_DPI_35MM;
 }
 
 /**
@@ -280,8 +281,8 @@ int scanResolveWindow(const struct DescriptorParameters *pParams, struct Window 
     }
 
     // the format row must belong to the configured lens stage
-    if (((pParams->carrier == MS_CARRIER_35MM) && (pFormat->maxDPI != DESC_MAX_DPI_35MM)) ||
-        ((pParams->carrier == MS_CARRIER_120) && (pFormat->maxDPI != DESC_MAX_DPI_120)))
+    if (((pParams->carrier == MS_CARRIER_35MM) && (pFormat->maxDPI != PROTO_MAX_DPI_35MM)) ||
+        ((pParams->carrier == MS_CARRIER_120) && (pFormat->maxDPI != PROTO_MAX_DPI_120)))
     {
         return MS_ERR_RANGE;
     }

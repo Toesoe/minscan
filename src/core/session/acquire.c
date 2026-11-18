@@ -54,7 +54,7 @@ static int burstPlanFor(const struct Descriptor *pJob, const struct Acquisition 
     int      width      = (int)descriptorGetWidth(pJob);
     int      rowUnit    = (int)descriptorGetRowUnit(pJob);
     int      scaledRows = (int)descriptorGetRows(pJob);
-    uint16_t word       = (uint16_t)MS_WORD_DATA_BASE | (uint16_t)rowUnit;
+    uint16_t word       = (uint16_t)PROTO_WORD_DATA_BASE | (uint16_t)rowUnit;
 
     if (colour)
     {
@@ -76,14 +76,14 @@ static int burstPlanFor(const struct Descriptor *pJob, const struct Acquisition 
 
     if (colour)
     {
-        word |= (uint16_t)MS_WORD_DATA_COLOUR;
+        word |= (uint16_t)PROTO_WORD_DATA_COLOUR;
     }
     if (pAcquisition->job == MS_JOB_SCAN)
     {
-        word |= (uint16_t)MS_WORD_DATA_SCAN;
+        word |= (uint16_t)PROTO_WORD_DATA_SCAN;
     }
 
-    pPlanOut->selector      = pAcquisition->ir ? (uint8_t)MS_SEL_DATA_IR : (uint8_t)MS_SEL_DATA_NO_IR;
+    pPlanOut->selector      = pAcquisition->ir ? (uint8_t)PROTO_SEL_DATA_IR : (uint8_t)PROTO_SEL_DATA_NO_IR;
     pPlanOut->word          = word;
     pPlanOut->cols          = cols;
     pPlanOut->planes        = planes;
@@ -147,7 +147,7 @@ static int readBurst(struct Session *pSession, const struct Descriptor *pJob, co
     uint8_t cdbTerminator[10];
 
     if ((protoCDBRead(plan.selector, plan.word, (uint32_t)plan.rowBytes, cdbRead) == 0) ||
-        (protoCDBRead(plan.selector, (uint16_t)(plan.word & MS_WORD_TERM_MASK), (uint32_t)plan.rowBytes,
+        (protoCDBRead(plan.selector, (uint16_t)(plan.word & PROTO_WORD_TERM_MASK), (uint32_t)plan.rowBytes,
                       cdbTerminator) == 0))
     {
         free(pWireRow);
@@ -165,7 +165,7 @@ static int readBurst(struct Session *pSession, const struct Descriptor *pJob, co
         rc = sessionExecCdb(pSession, pCdb, 10, MS_DIR_IN, pWireRow, (size_t)plan.rowBytes, SESSION_READ_TIMEOUT_MS,
                             &res);
 
-        if ((rc != MS_OK) || (res.status != MS_SCSI_GOOD) || (res.resid != 0))
+        if ((rc != MS_OK) || (res.status != PROTO_SCSI_GOOD) || (res.resid != 0))
         {
             frameTruncate(pFrame, row, plan.rowBytes);
 
@@ -250,7 +250,7 @@ static int runArming(struct Session *pSession, const struct Descriptor *pArm)
         turRc = transportExec(pSession->pTransport, cdbRead, cdbLen, MS_DIR_NONE, nullptr, 0, SESSION_READ_TIMEOUT_MS,
                               &res);
 
-        if ((turRc == MS_OK) && (res.status == MS_SCSI_GOOD))
+        if ((turRc == MS_OK) && (res.status == PROTO_SCSI_GOOD))
         {
             // unit ready; break
             turRc = MS_OK;
@@ -267,7 +267,7 @@ static int runArming(struct Session *pSession, const struct Descriptor *pArm)
 
     uint8_t readback[8];
 
-    return sessionReadParam(pSession, MS_SEL_ARM, MS_WORD_ARM_READBACK, readback, sizeof readback);
+    return sessionReadParam(pSession, PROTO_SEL_ARM, PROTO_WORD_ARM_READBACK, readback, sizeof readback);
 }
 
 /**

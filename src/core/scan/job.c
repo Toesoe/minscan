@@ -11,9 +11,9 @@
 
 #include "job.h"
 
+#include "exposure.h"
 #include "ladder.h"
 #include "minscan/error.h"
-#include "minscan/exposure.h"
 #include "window.h"
 
 #include <math.h>

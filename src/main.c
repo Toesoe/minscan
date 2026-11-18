@@ -1,12 +1,13 @@
 #include "argtable3.h"
 #include "minscan/error.h"
-#include "minscan/proto.h"
 #include "minscan/time.h"
 #include "minscan/transport.h"
 #include "src/core/image/image.h"
 #include "src/core/scan/window.h"
 #include "src/core/session/session.h"
 #include "src/core/tiff.h"
+#include "src/core/wire/cdb.h"
+#include "src/core/wire/scsi.h"
 
 #include <limits.h>
 #include <math.h>
@@ -67,7 +68,7 @@ static int cmd_probe(int argc, char **argv, arg_dstr_t res, void *ctx)
         {
             printf("probe: TUR status=%02x host=%04x driver=%04x resid=%d\n", result.status, result.hostStatus,
                    result.driverStatus, result.resid);
-            if (result.status != MS_SCSI_GOOD)
+            if (result.status != PROTO_SCSI_GOOD)
             {
                 rc = MS_ERR_PROTO;
             }

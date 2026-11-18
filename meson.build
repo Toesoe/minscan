@@ -23,8 +23,9 @@ inc = include_directories('include')
 # The embedding library has no TIFF writer, only the CLI and its tests need libtiff.
 core_common_src = files(
     'src/core/log.c',
-    'src/core/proto.c',
-    'src/core/exposure.c',
+    'src/core/wire/cdb.c',
+    'src/core/wire/pages.c',
+    'src/core/scan/exposure.c',
     'src/core/image/frame.c',
     'src/core/image/coreg.c',
     'src/core/image/ir.c',

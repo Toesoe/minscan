@@ -11,11 +11,13 @@
 
 #include "internal.h"
 #include "minscan/error.h"
-#include "minscan/exposure.h"
-#include "minscan/proto.h"
 #include "minscan/time.h"
+#include "src/core/scan/exposure.h"
 #include "src/core/scan/window.h"
+#include "src/core/wire/cdb.h"
 #include "src/core/wire/descriptor.h"
+#include "src/core/wire/pages.h"
+#include "src/core/wire/scsi.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -48,11 +50,11 @@ int sessionMaxFrameGroup(enum Carrier carrier, unsigned *pMaxGroup)
     switch (carrier)
     {
         case MS_CARRIER_35MM:
-            *pMaxGroup = DESC_MAX_FRAME_GROUP_35;
+            *pMaxGroup = PROTO_MAX_FRAME_GROUP_35;
             return MS_OK;
 
         case MS_CARRIER_120:
-            *pMaxGroup = DESC_MAX_FRAME_GROUP_120;
+            *pMaxGroup = PROTO_MAX_FRAME_GROUP_120;
             return MS_OK;
 
         default:
@@ -69,11 +71,11 @@ int sessionCarrierForMediaCode(enum ProtoMediaCode code, enum Carrier *pCarrierO
 
     switch (code)
     {
-        case MS_MEDIA_CODE_35MM:
+        case PROTO_MEDIA_CODE_35MM:
             *pCarrierOut = MS_CARRIER_35MM;
             return MS_OK;
 
-        case MS_MEDIA_CODE_120:
+        case PROTO_MEDIA_CODE_120:
             *pCarrierOut = MS_CARRIER_120;
             return MS_OK;
 
@@ -93,21 +95,21 @@ int sessionRefreshPages(struct Session *pSession)
 
     uint8_t buf[SESSION_PAGE25_READ_LEN];
 
-    if (sessionModeSense(pSession, MS_PAGE_FRAME, (uint8_t)SESSION_PAGE24_READ_LEN, buf, SESSION_PAGE24_READ_LEN) !=
+    if (sessionModeSense(pSession, PROTO_PAGE_FRAME, (uint8_t)SESSION_PAGE24_READ_LEN, buf, SESSION_PAGE24_READ_LEN) !=
             MS_OK ||
         protoPage24Parse(buf, SESSION_PAGE24_READ_LEN, &pSession->page24) != MS_OK)
     {
         return MS_ERR_PROTO;
     }
 
-    if (sessionModeSense(pSession, MS_PAGE_LENS, (uint8_t)SESSION_PAGE25_READ_LEN, buf, SESSION_PAGE25_READ_LEN) !=
+    if (sessionModeSense(pSession, PROTO_PAGE_LENS, (uint8_t)SESSION_PAGE25_READ_LEN, buf, SESSION_PAGE25_READ_LEN) !=
             MS_OK ||
         protoPage25Parse(buf, SESSION_PAGE25_READ_LEN, &pSession->page25) != MS_OK)
     {
         return MS_ERR_PROTO;
     }
 
-    if (sessionModeSense(pSession, MS_PAGE_JOB, (uint8_t)SESSION_PAGE28_READ_LEN, buf, SESSION_PAGE28_READ_LEN) !=
+    if (sessionModeSense(pSession, PROTO_PAGE_JOB, (uint8_t)SESSION_PAGE28_READ_LEN, buf, SESSION_PAGE28_READ_LEN) !=
             MS_OK ||
         protoPage28Parse(buf, SESSION_PAGE28_READ_LEN, &pSession->page28) != MS_OK)
     {
@@ -156,8 +158,8 @@ int sessionInit(struct Session *pSession, struct Transport *pTransport, struct L
         return MS_ERR_RANGE;
     }
 
-    if (((pSession->carrier.type == MS_CARRIER_35MM) && (pFormat->maxDPI != DESC_MAX_DPI_35MM)) ||
-        ((pSession->carrier.type == MS_CARRIER_120) && (pFormat->maxDPI != DESC_MAX_DPI_120)))
+    if (((pSession->carrier.type == MS_CARRIER_35MM) && (pFormat->maxDPI != PROTO_MAX_DPI_35MM)) ||
+        ((pSession->carrier.type == MS_CARRIER_120) && (pFormat->maxDPI != PROTO_MAX_DPI_120)))
     {
         minscanLog(MS_LOG_ERROR, "init: format 0x%02x is not a %s preset", (unsigned)pFormat->codes[0],
                    pSession->carrier.type == MS_CARRIER_35MM ? "35mm" : "120");
@@ -262,18 +264,18 @@ int sessionWaitReady(struct Session *pSession, unsigned timeoutMs)
             return rc;
         }
 
-        if (res.status == MS_SCSI_GOOD)
+        if (res.status == PROTO_SCSI_GOOD)
         {
             return MS_OK;
         }
 
-        if (res.status == MS_SCSI_BUSY)
+        if (res.status == PROTO_SCSI_BUSY)
         {
             (void)timeSleepMs(READY_POLL_MS);
             continue;
         }
 
-        if (res.status != MS_SCSI_CHECK_CONDITION || res.senseLen < SESSION_SENSE_FIXED_LEN)
+        if (res.status != PROTO_SCSI_CHECK_CONDITION || res.senseLen < SESSION_SENSE_FIXED_LEN)
         {
             return MS_ERR_PROTO;
         }
@@ -283,12 +285,12 @@ int sessionWaitReady(struct Session *pSession, unsigned timeoutMs)
         uint8_t  ascq = res.sense[13];
         uint16_t code = (uint16_t)(((uint16_t)asc << 8) | ascq);
 
-        if (key == MS_SK_UNIT_ATTENTION)
+        if (key == PROTO_SK_UNIT_ATTENTION)
         {
             continue;
         }
 
-        if (key == MS_SK_NOT_READY && code == MS_SC_NOT_READY_BECOMING_READY)
+        if (key == PROTO_SK_NOT_READY && code == PROTO_SC_NOT_READY_BECOMING_READY)
         {
             (void)timeSleepMs(READY_POLL_MS);
             continue;
@@ -311,7 +313,7 @@ int sessionReadSatExpTime(struct Session *pSession)
     uint8_t                cdb[10];
     uint8_t                buf[SAT_BYTES];
     struct TransportResult res;
-    size_t                 cdbLen = protoCDBRead(MS_SEL_SAT_35, SAT_WORD_35, (uint32_t)sizeof buf, cdb);
+    size_t                 cdbLen = protoCDBRead(PROTO_SEL_SAT_35, SAT_WORD_35, (uint32_t)sizeof buf, cdb);
     int rc = sessionExecCdb(pSession, cdb, cdbLen, MS_DIR_IN, buf, sizeof buf, SAT_READ_TIMEOUT_MS, &res);
 
     if (rc != MS_OK)
@@ -319,14 +321,14 @@ int sessionReadSatExpTime(struct Session *pSession)
         return rc;
     }
 
-    if (res.status != MS_SCSI_GOOD || res.resid != 0)
+    if (res.status != PROTO_SCSI_GOOD || res.resid != 0)
     {
         return sessionLogScsiError("SatExpTime 35mm", &res);
     }
 
     parseSatExpTime(buf, &pSession->sat35);
 
-    cdbLen = protoCDBRead(MS_SEL_SAT_120, SAT_WORD_120, (uint32_t)sizeof buf, cdb);
+    cdbLen = protoCDBRead(PROTO_SEL_SAT_120, SAT_WORD_120, (uint32_t)sizeof buf, cdb);
     rc     = sessionExecCdb(pSession, cdb, cdbLen, MS_DIR_IN, buf, sizeof buf, SAT_READ_TIMEOUT_MS, &res);
 
     if (rc != MS_OK)
@@ -334,7 +336,7 @@ int sessionReadSatExpTime(struct Session *pSession)
         return rc;
     }
 
-    if (res.status != MS_SCSI_GOOD || res.resid != 0)
+    if (res.status != PROTO_SCSI_GOOD || res.resid != 0)
     {
         return sessionLogScsiError("SatExpTime 120", &res);
     }
@@ -372,7 +374,7 @@ int sessionCheckCarrier(struct Session *pSession)
 
     uint8_t buf[SESSION_PAGE24_READ_LEN];
 
-    if (sessionModeSense(pSession, MS_PAGE_FRAME, (uint8_t)SESSION_PAGE24_READ_LEN, buf, sizeof buf) != MS_OK ||
+    if (sessionModeSense(pSession, PROTO_PAGE_FRAME, (uint8_t)SESSION_PAGE24_READ_LEN, buf, sizeof buf) != MS_OK ||
         protoPage24Parse(buf, sizeof buf, &pSession->page24) != MS_OK)
     {
         return MS_ERR_PROTO;

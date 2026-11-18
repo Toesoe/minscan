@@ -28,7 +28,8 @@ int sessionSelectLensStage(struct Session *pSession)
     uint16_t targetDPI = (uint16_t)scanStageDPI(pSession->carrier.type);
     uint8_t  pageBuf[SESSION_PAGE25_READ_LEN];
 
-    if (sessionModeSense(pSession, MS_PAGE_LENS, (uint8_t)SESSION_PAGE25_READ_LEN, pageBuf, sizeof pageBuf) != MS_OK ||
+    if (sessionModeSense(pSession, PROTO_PAGE_LENS, (uint8_t)SESSION_PAGE25_READ_LEN, pageBuf, sizeof pageBuf) !=
+            MS_OK ||
         protoPage25Parse(pageBuf, sizeof pageBuf, &pSession->page25) != MS_OK)
     {
         return MS_ERR_PROTO;
@@ -55,7 +56,8 @@ int sessionSelectLensStage(struct Session *pSession)
         return rc;
     }
 
-    if (sessionModeSense(pSession, MS_PAGE_LENS, (uint8_t)SESSION_PAGE25_READ_LEN, pageBuf, sizeof pageBuf) != MS_OK ||
+    if (sessionModeSense(pSession, PROTO_PAGE_LENS, (uint8_t)SESSION_PAGE25_READ_LEN, pageBuf, sizeof pageBuf) !=
+            MS_OK ||
         protoPage25Parse(pageBuf, sizeof pageBuf, &pSession->page25) != MS_OK)
     {
         return MS_ERR_PROTO;
@@ -102,7 +104,8 @@ int sessionSetFrameGroup(struct Session *pSession, unsigned frameGroup)
     uint8_t pageBuf[SESSION_PAGE24_READ_LEN];
 
     // verify the carrier on the wire before moving anything
-    if (sessionModeSense(pSession, MS_PAGE_FRAME, (uint8_t)SESSION_PAGE24_READ_LEN, pageBuf, sizeof pageBuf) != MS_OK ||
+    if (sessionModeSense(pSession, PROTO_PAGE_FRAME, (uint8_t)SESSION_PAGE24_READ_LEN, pageBuf, sizeof pageBuf) !=
+            MS_OK ||
         protoPage24Parse(pageBuf, sizeof pageBuf, &pSession->page24) != MS_OK)
     {
         return MS_ERR_PROTO;
@@ -137,7 +140,8 @@ int sessionSetFrameGroup(struct Session *pSession, unsigned frameGroup)
         return rc;
     }
 
-    if (sessionModeSense(pSession, MS_PAGE_FRAME, (uint8_t)SESSION_PAGE24_READ_LEN, pageBuf, sizeof pageBuf) != MS_OK ||
+    if (sessionModeSense(pSession, PROTO_PAGE_FRAME, (uint8_t)SESSION_PAGE24_READ_LEN, pageBuf, sizeof pageBuf) !=
+            MS_OK ||
         protoPage24Parse(pageBuf, sizeof pageBuf, &pSession->page24) != MS_OK)
     {
         return MS_ERR_PROTO;

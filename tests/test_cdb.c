@@ -1,4 +1,4 @@
-#include "minscan/proto.h"
+#include "src/core/wire/cdb.h"
 #include "test.h"
 
 int main(void)

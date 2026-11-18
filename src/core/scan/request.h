@@ -52,7 +52,7 @@ struct DescriptorParameters
     int           ir;         ///< request the IR on descriptor
     unsigned      readPasses; ///< 0 = default 1; 3/5 focus-only; 10 focus-open-only
 
-    const struct Exposure *pExp; ///< f2..f5 from exposureDerive; never a raw Sat
+    const struct Exposure *pExp; ///< f2..f5 from exposureFromSat; never a raw Sat
 };
 
 #endif //! REQUEST_H_

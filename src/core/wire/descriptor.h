@@ -14,22 +14,16 @@
 
 #include <stdint.h>
 
-#define DESC_TAIL_LEN            14
+#define DESC_TAIL_LEN    14
 
-#define DESC_STRUCT_TAG          0x5c
-#define DESC_TABLE_TAG           0x80
-#define DESC_FLAGS_TAG           0x10
+#define DESC_STRUCT_TAG  0x5c
+#define DESC_TABLE_TAG   0x80
+#define DESC_FLAGS_TAG   0x10
 
-#define DESC_MODE_COLOUR         (0xffu) ///< +0x21 colour, arming or focus block
-#define DESC_MODE_MONO           (0xfau) ///< +0x21 mono scan/prescan
+#define DESC_MODE_COLOUR (0xffu) ///< +0x21 colour, arming or focus block
+#define DESC_MODE_MONO   (0xfau) ///< +0x21 mono scan/prescan
 
-#define DESC_LEN                 (100) ///< total descriptor size on the wire
-
-#define DESC_MAX_DPI_120         (3200)
-#define DESC_MAX_DPI_35MM        (4800)
-
-#define DESC_MAX_FRAME_GROUP_120 (1)
-#define DESC_MAX_FRAME_GROUP_35  (3)
+#define DESC_LEN         (100) ///< total descriptor size on the wire
 
 enum DescriptorOffset
 {

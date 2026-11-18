@@ -1,5 +1,5 @@
 #include "minscan/error.h"
-#include "minscan/proto.h"
+#include "src/core/wire/pages.h"
 #include "test.h"
 
 int main(void)

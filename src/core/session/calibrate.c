@@ -97,7 +97,7 @@ int sessionReadBase(struct Session *pSession, unsigned div, uint16_t **ppBase, i
 
     const bool     is35mm  = (pSession->carrier.type == MS_CARRIER_35MM);
     const int      srcCols = is35mm ? IMAGE_MAX_COLS_35 : IMAGE_MAX_COLS_120;
-    const uint16_t word    = is35mm ? (uint16_t)MS_WORD_INIT_BANK0 : (uint16_t)MS_WORD_INIT_BANK1;
+    const uint16_t word    = is35mm ? (uint16_t)PROTO_WORD_INIT_BANK0 : (uint16_t)PROTO_WORD_INIT_BANK1;
     const size_t   srcLen  = (size_t)srcCols * 4u * sizeof(uint16_t);
 
     // read the full-width bank straight into the buffer the caller will own
@@ -108,7 +108,7 @@ int sessionReadBase(struct Session *pSession, unsigned div, uint16_t **ppBase, i
         return MS_ERR_NOMEM;
     }
 
-    const int rc = sessionReadParam(pSession, MS_SEL_INIT, word, (uint8_t *)pBase, srcLen);
+    const int rc = sessionReadParam(pSession, PROTO_SEL_INIT, word, (uint8_t *)pBase, srcLen);
 
     if (rc != MS_OK)
     {

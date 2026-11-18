@@ -12,11 +12,11 @@
 #ifndef MINSCAN_SESSION_H_
 #define MINSCAN_SESSION_H_
 
-#include "minscan/exposure.h"
-#include "minscan/proto.h"
 #include "minscan/transport.h"
 #include "src/core/frame.h"
+#include "src/core/scan/exposure.h"
 #include "src/core/scan/request.h"
+#include "src/core/wire/pages.h"
 
 #include <stddef.h>
 #include <stdint.h>

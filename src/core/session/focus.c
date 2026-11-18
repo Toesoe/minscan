@@ -165,7 +165,7 @@ static int focusMeasureAt(struct Session *pSession, const struct Descriptor *pBa
     }
 
     uint8_t cdb[10];
-    size_t  cdbLen = protoCDBRead(MS_SEL_DATA_NO_IR, word, FOCUS_READ_BYTES, cdb);
+    size_t  cdbLen = protoCDBRead(PROTO_SEL_DATA_NO_IR, word, FOCUS_READ_BYTES, cdb);
 
     if (cdbLen == 0)
     {
@@ -186,7 +186,7 @@ static int focusMeasureAt(struct Session *pSession, const struct Descriptor *pBa
             return rc;
         }
 
-        if (res.status != MS_SCSI_GOOD || res.resid != 0)
+        if (res.status != PROTO_SCSI_GOOD || res.resid != 0)
         {
             return MS_ERR_PROTO;
         }
@@ -379,7 +379,7 @@ int sessionAutofocus(struct Session *pSession, unsigned frame, int16_t *pOutFocu
 
     uint8_t buf[FOCUS_PAGE25_LEN];
 
-    if (sessionModeSense(pSession, MS_PAGE_LENS, (uint8_t)FOCUS_PAGE25_LEN, buf, sizeof buf) != MS_OK ||
+    if (sessionModeSense(pSession, PROTO_PAGE_LENS, (uint8_t)FOCUS_PAGE25_LEN, buf, sizeof buf) != MS_OK ||
         protoPage25Parse(buf, sizeof buf, &pSession->page25) != MS_OK)
     {
         return MS_ERR_PROTO;
@@ -576,7 +576,7 @@ int sessionAutofocus(struct Session *pSession, unsigned frame, int16_t *pOutFocu
 
     focusLog(pSession, "commit", (int16_t)best, metric);
 
-    if (sessionModeSense(pSession, MS_PAGE_LENS, (uint8_t)FOCUS_PAGE25_LEN, buf, sizeof buf) != MS_OK ||
+    if (sessionModeSense(pSession, PROTO_PAGE_LENS, (uint8_t)FOCUS_PAGE25_LEN, buf, sizeof buf) != MS_OK ||
         protoPage25Parse(buf, sizeof buf, &pSession->page25) != MS_OK)
     {
         rc = MS_ERR_PROTO;
@@ -650,7 +650,7 @@ int sessionMeasureFocus(struct Session *pSession, int16_t focus, double *pOutSco
     uint8_t buf[FOCUS_PAGE25_LEN];
 
     // the descriptor write is the focus setter; verify the device took it
-    if (sessionModeSense(pSession, MS_PAGE_LENS, (uint8_t)FOCUS_PAGE25_LEN, buf, sizeof buf) != MS_OK ||
+    if (sessionModeSense(pSession, PROTO_PAGE_LENS, (uint8_t)FOCUS_PAGE25_LEN, buf, sizeof buf) != MS_OK ||
         protoPage25Parse(buf, sizeof buf, &pSession->page25) != MS_OK)
     {
         return MS_ERR_PROTO;

@@ -48,15 +48,15 @@ int sessionDeriveExposure(const struct Session *pSession, const struct Acquisiti
         return MS_ERR_RANGE;
     }
 
-    bool isGlass;
+    bool glassHolder;
 
     if (pSession->carrier.type == MS_CARRIER_120)
     {
-        isGlass = !pSession->carrier.glassless;
+        glassHolder = !pSession->carrier.glassless;
     }
     else
     {
-        isGlass = (pSession->carrier.uniA != 0);
+        glassHolder = (pSession->carrier.uniA != 0);
     }
 
     double ev = pAcquisition->ev;
@@ -68,7 +68,7 @@ int sessionDeriveExposure(const struct Session *pSession, const struct Acquisiti
 
     const bool prescan = (pAcquisition->job == MS_JOB_PRESCAN);
 
-    return exposureDerive(pSat, pSession->carrier.film, isGlass, ev, prescan, pAcquisition->ir, pOut);
+    return exposureFromSat(pSat, pSession->carrier.film, glassHolder, ev, prescan, pAcquisition->ir, pOut);
 }
 
 int sessionBuildJobDescriptor(const struct Session *pSession, const struct Acquisition *pAcquisition, enum Job job,

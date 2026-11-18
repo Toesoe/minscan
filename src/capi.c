@@ -1,11 +1,12 @@
 #include "minscan/capi.h"
 
 #include "minscan/error.h"
-#include "minscan/proto.h"
 #include "minscan/transport.h"
 #include "src/core/image/image.h"
 #include "src/core/scan/window.h"
 #include "src/core/session/session.h"
+#include "src/core/wire/cdb.h"
+#include "src/core/wire/scsi.h"
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -168,9 +169,9 @@ int ms_probe(const char *device, int *media, char *err, size_t errlen)
     if (rc == MS_OK) rc = sessionRefreshPages(&session);
     if ((rc == MS_OK) && (media != nullptr))
     {
-        if (session.page24.media == MS_MEDIA_CODE_35MM)
+        if (session.page24.media == PROTO_MEDIA_CODE_35MM)
             *media = MS_API_MEDIA_35MM;
-        else if (session.page24.media == MS_MEDIA_CODE_120)
+        else if (session.page24.media == PROTO_MEDIA_CODE_120)
             *media = MS_API_MEDIA_120;
     }
 
@@ -477,7 +478,7 @@ int ms_eject(MsSession *session, char *err, size_t errlen)
 
     uint8_t                cdb[10];
     struct TransportResult res;
-    const size_t           n = protoCDBVendor31(MS_V31_EJECT, cdb);
+    const size_t           n = protoCDBVendor31(PROTO_V31_EJECT, cdb);
 
     if (n == 0) return MS_ERR_RANGE;
 
@@ -488,7 +489,7 @@ int ms_eject(MsSession *session, char *err, size_t errlen)
         setError(err, errlen, "eject: %s", errToString(rc));
         return rc;
     }
-    if (res.status != MS_SCSI_GOOD)
+    if (res.status != PROTO_SCSI_GOOD)
     {
         setError(err, errlen, "eject: SCSI status 0x%02x", (unsigned)res.status);
         return MS_ERR_PROTO;

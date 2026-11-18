@@ -1,5 +1,5 @@
 #include "minscan/error.h"
-#include "minscan/exposure.h"
+#include "src/core/scan/exposure.h"
 #include "src/core/scan/job.h"
 #include "src/core/wire/descriptor.h"
 #include "test.h"

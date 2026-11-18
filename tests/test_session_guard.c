@@ -1,8 +1,8 @@
 #include "minscan/error.h"
-#include "minscan/proto.h"
 #include "src/core/image/image.h"
 #include "src/core/session/session.h"
 #include "src/core/wire/descriptor.h"
+#include "src/core/wire/scsi.h"
 #include "test.h"
 
 #include <string.h>
@@ -46,60 +46,60 @@ static int mockExec(const struct Transport *pTransport, const uint8_t *pCdb, siz
     struct MockState *pState = pTransport->pCtx;
 
     memset(pRes, 0, sizeof *pRes);
-    pRes->status = MS_SCSI_GOOD;
+    pRes->status = PROTO_SCSI_GOOD;
 
     switch (pCdb[0])
     {
-        case MS_OP_TEST_UNIT_READY:
+        case PROTO_OP_TEST_UNIT_READY:
         {
             pState->turCount++;
             return MS_OK;
         }
-        case MS_OP_MODE_SENSE6:
+        case PROTO_OP_MODE_SENSE6:
         {
             uint8_t page = pCdb[2];
 
-            if (page == MS_PAGE_FRAME)
+            if (page == PROTO_PAGE_FRAME)
             {
                 if ((pBuf == nullptr) || (bufLen < 9))
                 {
                     return MS_ERR_RANGE;
                 }
                 memset(pBuf, 0, 9);
-                pBuf[4] = (uint8_t)MS_PAGE_FRAME;
-                pBuf[5] = MS_PAGE24_LEN;
+                pBuf[4] = (uint8_t)PROTO_PAGE_FRAME;
+                pBuf[5] = PROTO_PAGE24_LEN;
                 pBuf[6] = pState->frameGroup;
                 pBuf[7] = pState->media;
                 return MS_OK;
             }
-            if (page == MS_PAGE_LENS)
+            if (page == PROTO_PAGE_LENS)
             {
                 if ((pBuf == nullptr) || (bufLen < 11))
                 {
                     return MS_ERR_RANGE;
                 }
                 memset(pBuf, 0, 11);
-                pBuf[4] = (uint8_t)MS_PAGE_LENS;
-                pBuf[5] = MS_PAGE25_LEN;
+                pBuf[4] = (uint8_t)PROTO_PAGE_LENS;
+                pBuf[5] = PROTO_PAGE25_LEN;
                 putU16BE(&pBuf[6], pState->maxDPI);
                 putU16BE(&pBuf[8], (uint16_t)pState->focus);
                 return MS_OK;
             }
-            if (page == MS_PAGE_JOB)
+            if (page == PROTO_PAGE_JOB)
             {
                 if ((pBuf == nullptr) || (bufLen < 8))
                 {
                     return MS_ERR_RANGE;
                 }
                 memset(pBuf, 0, 8);
-                pBuf[4] = (uint8_t)MS_PAGE_JOB;
-                pBuf[5] = MS_PAGE28_LEN;
+                pBuf[4] = (uint8_t)PROTO_PAGE_JOB;
+                pBuf[5] = PROTO_PAGE28_LEN;
                 putU16BE(&pBuf[6], pState->status);
                 return MS_OK;
             }
             return MS_ERR_RANGE;
         }
-        case MS_OP_MODE_SELECT6:
+        case PROTO_OP_MODE_SELECT6:
         {
             if (pBuf == nullptr)
             {
@@ -110,18 +110,18 @@ static int mockExec(const struct Transport *pTransport, const uint8_t *pCdb, siz
             pState->lastSelectLen  = bufLen < sizeof pState->lastSelectBuf ? bufLen : sizeof pState->lastSelectBuf;
             memcpy(pState->lastSelectBuf, pBuf, pState->lastSelectLen);
 
-            if (pBuf[4] == MS_PAGE_FRAME)
+            if (pBuf[4] == PROTO_PAGE_FRAME)
             {
                 pState->frameGroup = pBuf[6];
             }
-            else if (pBuf[4] == MS_PAGE_LENS)
+            else if (pBuf[4] == PROTO_PAGE_LENS)
             {
                 pState->maxDPI = (uint16_t)(((uint16_t)pBuf[6] << 8) | pBuf[7]);
                 pState->focus  = (int16_t)(((uint16_t)pBuf[8] << 8) | pBuf[9]);
             }
             return MS_OK;
         }
-        case MS_OP_WRITE10:
+        case PROTO_OP_WRITE10:
         {
             if ((pBuf == nullptr) || (bufLen != (size_t)DESC_LEN))
             {
@@ -131,9 +131,9 @@ static int mockExec(const struct Transport *pTransport, const uint8_t *pCdb, siz
             pState->descriptorCount++;
             return MS_OK;
         }
-        case MS_OP_READ10:
+        case PROTO_OP_READ10:
         {
-            if (pCdb[2] == (uint8_t)MS_SEL_SAT_35)
+            if (pCdb[2] == (uint8_t)PROTO_SEL_SAT_35)
             {
                 static const uint8_t sat[8] = {0x02, 0xb3, 0x02, 0x83, 0x02, 0xb7, 0x02, 0x4a};
 
@@ -144,7 +144,7 @@ static int mockExec(const struct Transport *pTransport, const uint8_t *pCdb, siz
                 memcpy(pBuf, sat, 8);
                 return MS_OK;
             }
-            if (pCdb[2] == (uint8_t)MS_SEL_DATA_NO_IR)
+            if (pCdb[2] == (uint8_t)PROTO_SEL_DATA_NO_IR)
             {
                 if ((pBuf == nullptr) || (bufLen == 0))
                 {
@@ -156,7 +156,7 @@ static int mockExec(const struct Transport *pTransport, const uint8_t *pCdb, siz
             }
             return MS_ERR_RANGE;
         }
-        case MS_OP_VENDOR31:
+        case PROTO_OP_VENDOR31:
         {
             return MS_OK;
         }
@@ -196,29 +196,29 @@ int main(void)
     struct LoadedCarrier carrier = {.type = MS_CARRIER_35MM, .film = MS_FILM_MONO};
 
     // --- init: media must match the configured carrier, both ways ---
-    resetMock(&state, MS_MEDIA_CODE_35MM, 3, 3200);
+    resetMock(&state, PROTO_MEDIA_CODE_35MM, 3, 3200);
     bindMock(&transport, &state);
     CHECK(sessionInit(&session, &transport, &carrier) == MS_OK);
     CHECK(session.frameGroup == 3);
     CHECK(session.dpi == 3200);
     CHECK(session.focus == 45);
 
-    resetMock(&state, MS_MEDIA_CODE_35MM, 1, 4800);
+    resetMock(&state, PROTO_MEDIA_CODE_35MM, 1, 4800);
     bindMock(&transport, &state);
     carrier.type = MS_CARRIER_120;
     CHECK(sessionInit(&session, &transport, &carrier) == MS_ERR_RANGE);
 
-    resetMock(&state, MS_MEDIA_CODE_NONE, 0, 0);
+    resetMock(&state, PROTO_MEDIA_CODE_NONE, 0, 0);
     bindMock(&transport, &state);
     CHECK(sessionInit(&session, &transport, &carrier) == MS_ERR_NOT_READY);
 
-    resetMock(&state, MS_MEDIA_CODE_35MM, 4, 4800);
+    resetMock(&state, PROTO_MEDIA_CODE_35MM, 4, 4800);
     bindMock(&transport, &state);
     carrier.type = MS_CARRIER_35MM;
     CHECK(sessionInit(&session, &transport, &carrier) == MS_ERR_PROTO);
 
     // --- lens: only 4800/3200, and the live page decides the write ---
-    resetMock(&state, MS_MEDIA_CODE_35MM, 1, 3200);
+    resetMock(&state, PROTO_MEDIA_CODE_35MM, 1, 3200);
     bindMock(&transport, &state);
     memset(&session, 0, sizeof session);
     session.pTransport   = &transport;
@@ -227,7 +227,7 @@ int main(void)
     state.selectCount = 0;
     CHECK(sessionSelectLensStage(&session) == MS_OK);
     CHECK(state.selectCount == 1);
-    CHECK(state.lastSelectPage == MS_PAGE_LENS);
+    CHECK(state.lastSelectPage == PROTO_PAGE_LENS);
     CHECK(state.lastSelectBuf[6] == 0x12);
     CHECK(state.lastSelectBuf[7] == 0xc0); // 4800
     CHECK(session.dpi == 4800);
@@ -238,7 +238,7 @@ int main(void)
     CHECK(state.selectCount == 0); // already at 4800
 
     // 120 must move a leftover 35 mm stage back to 3200
-    resetMock(&state, MS_MEDIA_CODE_120, 1, 4800);
+    resetMock(&state, PROTO_MEDIA_CODE_120, 1, 4800);
     bindMock(&transport, &state);
     memset(&session, 0, sizeof session);
     session.pTransport   = &transport;
@@ -252,7 +252,7 @@ int main(void)
     CHECK(session.dpi == 3200);
 
     // --- frame group: 0 and > max are refused before any MODE SELECT ---
-    resetMock(&state, MS_MEDIA_CODE_35MM, 1, 4800);
+    resetMock(&state, PROTO_MEDIA_CODE_35MM, 1, 4800);
     bindMock(&transport, &state);
     memset(&session, 0, sizeof session);
     session.pTransport   = &transport;
@@ -266,7 +266,7 @@ int main(void)
 
     CHECK(sessionSetFrameGroup(&session, 2) == MS_OK);
     CHECK(state.selectCount == 1);
-    CHECK(state.lastSelectPage == MS_PAGE_FRAME);
+    CHECK(state.lastSelectPage == PROTO_PAGE_FRAME);
     CHECK(state.lastSelectBuf[6] == 2);
     CHECK(session.frameGroup == 2);
 
@@ -275,7 +275,7 @@ int main(void)
     CHECK(state.selectCount == 0); // already selected
 
     // 120 only accepts group 1
-    resetMock(&state, MS_MEDIA_CODE_120, 1, 3200);
+    resetMock(&state, PROTO_MEDIA_CODE_120, 1, 3200);
     bindMock(&transport, &state);
     memset(&session, 0, sizeof session);
     session.pTransport   = &transport;
@@ -288,13 +288,13 @@ int main(void)
     CHECK(state.selectCount == 0);
 
     // a live carrier swap is caught before the group write
-    state.media       = MS_MEDIA_CODE_35MM;
+    state.media       = PROTO_MEDIA_CODE_35MM;
     state.selectCount = 0;
     CHECK(sessionSetFrameGroup(&session, 1) == MS_ERR_PROTO);
     CHECK(state.selectCount == 0);
 
     // --- acquisition validation happens before any command ---
-    resetMock(&state, MS_MEDIA_CODE_35MM, 1, 4800);
+    resetMock(&state, PROTO_MEDIA_CODE_35MM, 1, 4800);
     bindMock(&transport, &state);
     memset(&session, 0, sizeof session);
     session.pTransport         = &transport;
@@ -342,7 +342,7 @@ int main(void)
     acquisition.readPasses = 0;
 
     // --- one full 35 mm mono prescan through the mock ---
-    resetMock(&state, MS_MEDIA_CODE_35MM, 1, 3200); // pre-resolution stage
+    resetMock(&state, PROTO_MEDIA_CODE_35MM, 1, 3200); // pre-resolution stage
     bindMock(&transport, &state);
     carrier.type       = MS_CARRIER_35MM;
     carrier.film       = MS_FILM_MONO;
@@ -386,27 +386,27 @@ int main(void)
     session.isCalibrated    = true;
     session.calibratedMedia = MS_CARRIER_35MM;
 
-    state.media = MS_MEDIA_CODE_35MM;
+    state.media = PROTO_MEDIA_CODE_35MM;
     CHECK(sessionCheckCarrier(&session) == MS_OK);
     CHECK(session.isCalibrated);
     CHECK(!session.carrierSwitched);
 
-    state.media = MS_MEDIA_CODE_NONE;
+    state.media = PROTO_MEDIA_CODE_NONE;
     CHECK(sessionCheckCarrier(&session) == MS_OK);
     CHECK(session.isCalibrated); // eject: keep the reference
     CHECK(!session.carrierSwitched);
 
-    state.media = MS_MEDIA_CODE_35MM;
+    state.media = PROTO_MEDIA_CODE_35MM;
     CHECK(sessionCheckCarrier(&session) == MS_OK);
     CHECK(session.isCalibrated); // reinsert same carrier: keep
     CHECK(!session.carrierSwitched);
 
-    state.media = MS_MEDIA_CODE_120;
+    state.media = PROTO_MEDIA_CODE_120;
     CHECK(sessionCheckCarrier(&session) == MS_OK);
     CHECK(!session.isCalibrated);   // switched carrier: invalidate
     CHECK(session.carrierSwitched); // and tell the API not to restore a cache entry
 
-    state.media = MS_MEDIA_CODE_35MM;
+    state.media = PROTO_MEDIA_CODE_35MM;
     CHECK(sessionCheckCarrier(&session) == MS_OK);
     CHECK(!session.isCalibrated); // stays invalid until calibrated
 
