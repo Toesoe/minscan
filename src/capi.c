@@ -2,7 +2,7 @@
 
 #include "minscan/error.h"
 #include "minscan/proto.h"
-#include "minscan/session.h"
+#include "src/core/session/session.h"
 #include "minscan/transport.h"
 #include "src/core/image/image.h"
 #include "src/core/scan/window.h"
@@ -61,26 +61,26 @@ static struct MsCalibration *calibrationSlot(const char *device)
     return &apiCalibrations[0];
 }
 
-static void calibrationObserve(const char *device, enum Carrier media)
+static void calibrationObserve(const char *device, enum Carrier carrier)
 {
     struct MsCalibration *pEntry = calibrationSlot(device);
 
-    if (pEntry->used && (pEntry->carrier != media))
+    if (pEntry->used && (pEntry->carrier != carrier))
     {
         // 120 <-> 35 is a different optical path; a cached ladder result is stale
         pEntry->valid = false;
     }
     snprintf(pEntry->device, sizeof pEntry->device, "%s", device);
-    pEntry->carrier = media;
+    pEntry->carrier = carrier;
     pEntry->used    = true;
 }
 
-static void calibrationStore(const char *device, enum Carrier media)
+static void calibrationStore(const char *device, enum Carrier carrier)
 {
     struct MsCalibration *pEntry = calibrationSlot(device);
 
     snprintf(pEntry->device, sizeof pEntry->device, "%s", device);
-    pEntry->carrier = media;
+    pEntry->carrier = carrier;
     pEntry->used    = true;
     pEntry->valid   = true;
 }
@@ -310,7 +310,7 @@ int ms_scan(MsSession *session, const MsRequest *request, MsProgressFn progress,
     }
     else
     {
-        rc = divisorForDPI(is35mm ? MS_CARRIER_35MM : MS_CARRIER_120, (unsigned)request->dpi, &div);
+        rc = scanDivisorForDPI(is35mm ? MS_CARRIER_35MM : MS_CARRIER_120, (unsigned)request->dpi, &div);
         if (rc != MS_OK)
         {
             setError(err, errlen, "invalid dpi %d", request->dpi);

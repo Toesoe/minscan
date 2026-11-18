@@ -273,7 +273,7 @@ static int validateParams(const struct DescriptorParameters *pParams)
     return MS_OK;
 }
 
-int descriptorBuild(const struct DescriptorParameters *pParams, struct Descriptor *pDescriptorOut)
+int scanBuildDescriptor(const struct DescriptorParameters *pParams, struct Descriptor *pDescriptorOut)
 {
     if (pDescriptorOut == nullptr)
     {
@@ -290,7 +290,7 @@ int descriptorBuild(const struct DescriptorParameters *pParams, struct Descripto
     }
 
     struct Window window;
-    rc = resolveWindow(pParams, &window);
+    rc = scanResolveWindow(pParams, &window);
 
     if (rc != MS_OK)
     {
@@ -311,7 +311,7 @@ int descriptorBuild(const struct DescriptorParameters *pParams, struct Descripto
 
     uint16_t maxExposure = exposureMax(pParams->pExp);
 
-    struct DescriptorIR ir = irParameters(&window, pParams, passes, maxExposure);
+    struct DescriptorIR ir = scanIRParameters(&window, pParams, passes, maxExposure);
 
     struct DescriptorFields fields = {
         .formatWindow = window.formatWindow,

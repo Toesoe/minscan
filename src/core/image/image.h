@@ -19,15 +19,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define MS_ROW_ALIGN    (64) ///< per-plane row pitch alignment in bytes
-#define MS_MAX_ROWS_120 (10560)
-#define MS_MAX_ROWS_35  (7024)
-#define MS_MAX_COLS_120 (7128)
-#define MS_MAX_COLS_35  (4728)
+#define IMAGE_ROW_ALIGN    (64) ///< per-plane row pitch alignment in bytes
+#define IMAGE_MAX_ROWS_120 (10560)
+#define IMAGE_MAX_ROWS_35  (7024)
+#define IMAGE_MAX_COLS_120 (7128)
+#define IMAGE_MAX_COLS_35  (4728)
 
 // per-column gain bounds, symmetric in log space (1/2.5 = 0.4). TODO validate other values
-#define MS_GAIN_MIN     (0.40)
-#define MS_GAIN_MAX     (2.50)
+#define IMAGE_GAIN_MIN     (0.40)
+#define IMAGE_GAIN_MAX     (2.50)
 
 /** @brief inputs for imagePostprocess */
 struct ImagePostParams
@@ -94,7 +94,7 @@ void imageFrameFreePlanes(struct Frame *pFrame);
 bool imageLevelScale(const double *pColMean, const double *pColGain, int cols, double *pScaleOut);
 
 /**
- * @brief clamp per-column gains to [MS_GAIN_MIN, MS_GAIN_MAX] (gain.c)
+ * @brief clamp per-column gains to [IMAGE_GAIN_MIN, IMAGE_GAIN_MAX] (gain.c)
  *
  * @param pGain per-column gains, length @p cols; modified in place
  * @param cols number of columns

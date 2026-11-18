@@ -31,7 +31,7 @@ struct DescriptorIR
  * @param maxExposure highest exposure value in the current scan
  * @return struct DescriptorIR block
  */
-struct DescriptorIR irParameters(const struct Window *pWindow, const struct DescriptorParameters *pParams,
+struct DescriptorIR scanIRParameters(const struct Window *pWindow, const struct DescriptorParameters *pParams,
                                  unsigned passes, uint16_t maxExposure);
 
 #endif //! LADDER_H_

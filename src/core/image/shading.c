@@ -90,7 +90,7 @@ int imageBaseGain(struct Frame *pFrame, const uint16_t *pBase, int baseCols, con
         if (clamped > 0)
         {
             minscanLog(MS_LOG_WARN, "imgShading: ch %d: %d column gains clamped to [%.2f, %.2f]", ch, clamped,
-                       MS_GAIN_MIN, MS_GAIN_MAX);
+                       IMAGE_GAIN_MIN, IMAGE_GAIN_MAX);
         }
 
         for (int row = 0; row < pFrame->rows; row++)

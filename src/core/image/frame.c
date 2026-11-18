@@ -32,7 +32,7 @@ int imageFrameAlloc(struct Frame *pFrame, int rows, int cols, int planes)
     size_t total = (size_t)rows * row;
 
     size_t rowBytes  = (size_t)cols * 2; // per plane, unpadded
-    size_t rowStride = (rowBytes + MS_ROW_ALIGN - 1) & ~((size_t)MS_ROW_ALIGN - 1);
+    size_t rowStride = (rowBytes + IMAGE_ROW_ALIGN - 1) & ~((size_t)IMAGE_ROW_ALIGN - 1);
 
     if ((size_t)rows > SIZE_MAX / rowStride)
     {
@@ -51,7 +51,7 @@ int imageFrameAlloc(struct Frame *pFrame, int rows, int cols, int planes)
     // alloc each plane separately
     for (int i = 0; i < planes; i++)
     {
-        pFrame->ppPlanes[i] = aligned_alloc(MS_ROW_ALIGN, planeBytes);
+        pFrame->ppPlanes[i] = aligned_alloc(IMAGE_ROW_ALIGN, planeBytes);
         if (!pFrame->ppPlanes[i])
         {
             pFrame->numPlanes = i;

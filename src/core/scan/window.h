@@ -42,7 +42,7 @@ struct Window
     uint16_t width;                         ///< +0x18; 256 for focus-class blocks
     uint16_t scaledRows;                    ///< +0x1c
     uint8_t  rowUnit;                       ///< K, +0x34
-    unsigned divisor;                       ///< referenceDPI / dpi before quantising; feeds irParameters
+    unsigned divisor;                       ///< referenceDPI / dpi before quantising; feeds scanIRParameters
     uint8_t  divisorField;                  ///< +0x32; 1 for arming/focus
     uint8_t  remainderField;                ///< 0 for arming/focus
     double   ratio;                         ///< referenceDPI / dpi, used by tailFor
@@ -54,7 +54,10 @@ struct Window
  * @param div divisor: 1, 2, 4 or 8
  * @return unsigned quantized value
  */
-unsigned coarseDivisor(unsigned div);
+unsigned scanCoarseDivisor(unsigned div);
+
+/** @brief maximum DPI of the lens stage for a carrier */
+unsigned scanStageDPI(enum Carrier carrier);
 
 /**
  * @brief resolve the format row and scan geometry for one request and output a new Window
@@ -63,7 +66,7 @@ unsigned coarseDivisor(unsigned div);
  * @param pOut new Window
  * @return int status code
  */
-int resolveWindow(const struct DescriptorParameters *pParams, struct Window *pOut);
+int scanResolveWindow(const struct DescriptorParameters *pParams, struct Window *pOut);
 
 /**
  * @brief get the format row by vendor format code
@@ -71,7 +74,7 @@ int resolveWindow(const struct DescriptorParameters *pParams, struct Window *pOu
  * @param code format code
  * @return const struct DescriptorFormat* or NULL
  */
-const struct DescriptorFormat *formatByCode(uint16_t code);
+const struct DescriptorFormat *scanFormatByCode(uint16_t code);
 
 /**
  * @brief get the default format row for a carrier
@@ -79,7 +82,7 @@ const struct DescriptorFormat *formatByCode(uint16_t code);
  * @param media carrier to look up
  * @return const struct DescriptorFormat*
  */
-const struct DescriptorFormat *defaultFormatFor(enum Carrier media);
+const struct DescriptorFormat *scanDefaultFormatFor(enum Carrier carrier);
 
 /** @brief translate a requested dpi into the descriptor divisor */
 
@@ -91,6 +94,6 @@ const struct DescriptorFormat *defaultFormatFor(enum Carrier media);
  * @param pDiv output divisor
  * @return int status code
  */
-int divisorForDPI(enum Carrier media, unsigned dpi, unsigned *pDiv);
+int scanDivisorForDPI(enum Carrier carrier, unsigned dpi, unsigned *pDiv);
 
 #endif //! WINDOW_H_

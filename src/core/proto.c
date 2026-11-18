@@ -98,7 +98,7 @@ int protoPage24Parse(const uint8_t *pBuf, size_t len, struct ProtoPage24 *pOut)
 size_t protoPage24Select(uint8_t frame_group, uint8_t out[9])
 {
     // 0 is not a frame position; 35 mm tops out at group 3
-    if ((frame_group == 0) || (frame_group > MS_MAX_FRAME_GROUP_35))
+    if ((frame_group == 0) || (frame_group > DESC_MAX_FRAME_GROUP_35))
     {
         return 0;
     }
@@ -128,7 +128,7 @@ int protoPage25Parse(const uint8_t *pBuf, size_t len, struct ProtoPage25 *pOut)
 size_t protoPage25Select(uint16_t max_dpi, int16_t focus, uint8_t out[11])
 {
     // the lens stepper only understands the two stage maxima
-    if ((max_dpi != MS_MAX_DPI_35MM) && (max_dpi != MS_MAX_DPI_120))
+    if ((max_dpi != DESC_MAX_DPI_35MM) && (max_dpi != DESC_MAX_DPI_120))
     {
         return 0;
     }

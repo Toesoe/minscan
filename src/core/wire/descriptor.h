@@ -25,11 +25,11 @@
 
 #define DESC_LEN               (100) ///< total descriptor size on the wire
 
-#define MS_MAX_DPI_120         (3200)
-#define MS_MAX_DPI_35MM        (4800)
+#define DESC_MAX_DPI_120         (3200)
+#define DESC_MAX_DPI_35MM        (4800)
 
-#define MS_MAX_FRAME_GROUP_120 (1)
-#define MS_MAX_FRAME_GROUP_35  (3)
+#define DESC_MAX_FRAME_GROUP_120 (1)
+#define DESC_MAX_FRAME_GROUP_35  (3)
 
 enum DescriptorOffset
 {

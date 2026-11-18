@@ -75,7 +75,7 @@ int imageCoregPlanes(struct Frame *pFrame, bool is35)
     int rc = MS_OK;
 
     // recalculate shift so it's scaled to the actual row count
-    int shift = (int)(FULL_FRAME_SHIFT_PX * pFrame->rows / (is35 ? MS_MAX_ROWS_35 : MS_MAX_ROWS_120) + 0.5);
+    int shift = (int)(FULL_FRAME_SHIFT_PX * pFrame->rows / (is35 ? IMAGE_MAX_ROWS_35 : IMAGE_MAX_ROWS_120) + 0.5);
 
     // G is reference plane, R and IR are +shift, B is -shift
     if (pFrame->numPlanes >= 3)

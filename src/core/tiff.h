@@ -12,7 +12,7 @@
 #ifndef MINSCAN_TIFF_H_
 #define MINSCAN_TIFF_H_
 
-#include "minscan/session.h"
+#include "src/core/frame.h"
 
 // writes the full frame. writeRGBI adds IR as the fourth sample. separateIR
 // writes the _IR sidecar independently of writeRGBI. both require a 4-plane

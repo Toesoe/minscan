@@ -94,7 +94,7 @@ int sessionWaitReady(struct Session *pSession, unsigned timeoutMs);
 int sessionReadPages(struct Session *pSession);
 
 int               sessionReadSat(struct Session *pSession);
-const struct Sat *sessionSatFor(const struct Session *pSession, enum Carrier media);
+const struct Sat *sessionSatFor(const struct Session *pSession, enum Carrier carrier);
 
 // focus resets to 0 when the stage changes
 /** @brief select the lens stage implied by the carrier */

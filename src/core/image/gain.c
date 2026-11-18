@@ -44,14 +44,14 @@ int imageClampGain(double *pGain, int cols)
 
     for (int currentCol = 0; currentCol < cols; currentCol++)
     {
-        if (isless(pGain[currentCol], MS_GAIN_MIN))
+        if (isless(pGain[currentCol], IMAGE_GAIN_MIN))
         {
-            pGain[currentCol] = MS_GAIN_MIN;
+            pGain[currentCol] = IMAGE_GAIN_MIN;
             clamped++;
         }
-        else if (isgreater(pGain[currentCol], MS_GAIN_MAX))
+        else if (isgreater(pGain[currentCol], IMAGE_GAIN_MAX))
         {
-            pGain[currentCol] = MS_GAIN_MAX;
+            pGain[currentCol] = IMAGE_GAIN_MAX;
             clamped++;
         }
     }

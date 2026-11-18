@@ -1,6 +1,6 @@
 #include "minscan/error.h"
 #include "minscan/proto.h"
-#include "minscan/session.h"
+#include "src/core/session/session.h"
 #include "src/core/wire/descriptor.h"
 #include "src/core/image/image.h"
 #include "test.h"

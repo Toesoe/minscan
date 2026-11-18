@@ -32,8 +32,8 @@ static struct IRTriple tripleMake(double p, double q, double r)
 /**
  * @brief pick the IR triple (P, Q, R) for one job from Minolta's A-D tables.
  *
- * @param ladder      dispatch table, 'A'..'D'; irParameters() chooses it
- * @param rung        coarseDivisor(divisor): 1, 2, 4 or 8.
+ * @param ladder      dispatch table, 'A'..'D'; scanIRParameters() chooses it
+ * @param rung        scanCoarseDivisor(divisor): 1, 2, 4 or 8.
  * @param durationSec estimated capture time, passes * (width * 0.0003 + (maxExposure + 1) * 0.0048).
  * @return P, Q, R in x87 load order: wire +0x42 = 10P, +0x44 = 10Q, +0x41 = 5R. R is a headroom budget that counts down
            with @p durationSec, Q a small fixed IR gain, and P is zero unless @p rung is 4 or 8.
@@ -208,7 +208,7 @@ static struct IRTriple irTriple(char ladder, int rung, double durationSec)
     }
 }
 
-struct DescriptorIR irParameters(const struct Window *pWindow, const struct DescriptorParameters *pParams,
+struct DescriptorIR scanIRParameters(const struct Window *pWindow, const struct DescriptorParameters *pParams,
                                  unsigned passes, uint16_t maxExposure)
 {
     struct DescriptorIR ir = {.level = IR_DEFAULT_LEVEL, .p = 0, .q = 0};
@@ -236,7 +236,7 @@ struct DescriptorIR irParameters(const struct Window *pWindow, const struct Desc
 
         double durationSec =
             (double)passes * ((double)pWindow->pFormat->width * 0.0003 + ((double)maxExposure + 1.0) * 0.0048);
-        struct IRTriple triple = irTriple(ladder, (int)coarseDivisor(pWindow->divisor), durationSec);
+        struct IRTriple triple = irTriple(ladder, (int)scanCoarseDivisor(pWindow->divisor), durationSec);
 
         pVal = triple.p;
         qVal = triple.q;

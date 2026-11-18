@@ -17,7 +17,7 @@
 #include <math.h>
 #include <stddef.h>
 
-// colour scans are this many reference rows taller; the 120 colour scan cancels it again (see resolveWindow)
+// colour scans are this many reference rows taller; the 120 colour scan cancels it again (see scanResolveWindow)
 #define COLOUR_ROW_DELTA 16
 // mono film shifts the frame aim by this many rows, scaled by the row unit factor
 #define MONO_AIM_DELTA   8
@@ -64,13 +64,13 @@ static const struct DescriptorFormat formatPresets[] = {
  * @param carrier carrier (decides lens stage)
  * @return unsigned max DPI for requested stage
  */
-static unsigned stageDPIFor(enum Carrier carrier)
+unsigned scanStageDPI(enum Carrier carrier)
 {
     if (carrier == MS_CARRIER_120)
     {
-        return MS_MAX_DPI_120;
+        return DESC_MAX_DPI_120;
     }
-    return MS_MAX_DPI_35MM;
+    return DESC_MAX_DPI_35MM;
 }
 
 /**
@@ -189,7 +189,7 @@ static int formatWindowAndAim(const struct DescriptorParameters *pParams, int cl
     return MS_OK;
 }
 
-unsigned coarseDivisor(unsigned div)
+unsigned scanCoarseDivisor(unsigned div)
 {
     if (div < 4)
     {
@@ -209,7 +209,7 @@ unsigned coarseDivisor(unsigned div)
     }
 }
 
-const struct DescriptorFormat *formatByCode(uint16_t code)
+const struct DescriptorFormat *scanFormatByCode(uint16_t code)
 {
     for (size_t i = 0; i < sizeof formatPresets / sizeof formatPresets[0]; i++)
     {
@@ -224,19 +224,19 @@ const struct DescriptorFormat *formatByCode(uint16_t code)
     return NULL;
 }
 
-const struct DescriptorFormat *defaultFormatFor(enum Carrier carrier)
+const struct DescriptorFormat *scanDefaultFormatFor(enum Carrier carrier)
 {
     switch (carrier)
     {
         case MS_CARRIER_35MM:
-            return formatByCode(1);
+            return scanFormatByCode(1);
         case MS_CARRIER_120:
-            return formatByCode(0x20);
+            return scanFormatByCode(0x20);
     }
     return NULL;
 }
 
-int divisorForDPI(enum Carrier carrier, unsigned dpi, unsigned *pDiv)
+int scanDivisorForDPI(enum Carrier carrier, unsigned dpi, unsigned *pDiv)
 {
     const struct DescriptorFormat *pFormat;
     unsigned                       div;
@@ -245,7 +245,7 @@ int divisorForDPI(enum Carrier carrier, unsigned dpi, unsigned *pDiv)
     {
         return MS_ERR_RANGE;
     }
-    pFormat = defaultFormatFor(carrier);
+    pFormat = scanDefaultFormatFor(carrier);
     if (pFormat == NULL || pFormat->maxDPI % dpi != 0)
     {
         return MS_ERR_RANGE;
@@ -265,23 +265,23 @@ int divisorForDPI(enum Carrier carrier, unsigned dpi, unsigned *pDiv)
     }
 }
 
-int resolveWindow(const struct DescriptorParameters *pParams, struct Window *pOut)
+int scanResolveWindow(const struct DescriptorParameters *pParams, struct Window *pOut)
 {
     if ((pParams == NULL) || (pOut == NULL) || (pParams->div == 0))
     {
         return MS_ERR_RANGE;
     }
 
-    const struct DescriptorFormat *pFormat = (pParams->formatCode != 0) ? formatByCode(pParams->formatCode) :
-                                                                          defaultFormatFor(pParams->carrier);
+    const struct DescriptorFormat *pFormat = (pParams->formatCode != 0) ? scanFormatByCode(pParams->formatCode) :
+                                                                          scanDefaultFormatFor(pParams->carrier);
     if (pFormat == NULL)
     {
         return MS_ERR_RANGE;
     }
 
     // the format row must belong to the configured lens stage
-    if (((pParams->carrier == MS_CARRIER_35MM) && (pFormat->maxDPI != MS_MAX_DPI_35MM)) ||
-        ((pParams->carrier == MS_CARRIER_120) && (pFormat->maxDPI != MS_MAX_DPI_120)))
+    if (((pParams->carrier == MS_CARRIER_35MM) && (pFormat->maxDPI != DESC_MAX_DPI_35MM)) ||
+        ((pParams->carrier == MS_CARRIER_120) && (pFormat->maxDPI != DESC_MAX_DPI_120)))
     {
         return MS_ERR_RANGE;
     }
@@ -302,7 +302,7 @@ int resolveWindow(const struct DescriptorParameters *pParams, struct Window *pOu
         return MS_ERR_RANGE;
     }
 
-    const unsigned referenceDPI = stageDPIFor(pParams->carrier);
+    const unsigned referenceDPI = scanStageDPI(pParams->carrier);
     const unsigned divisor      = referenceDPI / dpi;
     const double   ratio        = (double)referenceDPI / (double)dpi;
     const uint8_t  remainder    = (uint8_t)((ratio - trunc(ratio)) * 256.0);
@@ -344,7 +344,7 @@ int resolveWindow(const struct DescriptorParameters *pParams, struct Window *pOu
         scaledRows = (uint16_t)((unsigned)pFormat->rowUnitFactor * (unsigned)rows);
     }
 
-    unsigned rowUnit = (class == 0) ? coarseDivisor(divisor) : divisor;
+    unsigned rowUnit = (class == 0) ? scanCoarseDivisor(divisor) : divisor;
 
     rowUnit *= pFormat->rowUnitFactor;
     if (scaledRows == 1)

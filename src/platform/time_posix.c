@@ -31,8 +31,8 @@ int timeDeadlineAfter(unsigned ms, struct TimeDeadline *pOutDeadline)
         return MS_ERR_IO;
     }
 
-    now.tv_sec += (time_t)(ms / MS_PER_SEC);
-    now.tv_nsec += (long)(ms % MS_PER_SEC) * 1000000L;
+    now.tv_sec += (time_t)(ms / TIME_PER_SEC);
+    now.tv_nsec += (long)(ms % TIME_PER_SEC) * 1000000L;
     if (now.tv_nsec >= 1000000000L)
     {
         now.tv_sec += 1;

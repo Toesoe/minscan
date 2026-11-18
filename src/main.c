@@ -1,7 +1,7 @@
 #include "argtable3.h"
 #include "minscan/error.h"
 #include "minscan/proto.h"
-#include "minscan/session.h"
+#include "src/core/session/session.h"
 #include "minscan/time.h"
 #include "minscan/transport.h"
 #include "src/core/image/image.h"
@@ -53,7 +53,7 @@ static int cmd_probe(int argc, char **argv, arg_dstr_t res, void *ctx)
     struct Session session = {0};
     session.pTransport     = &transport;
 
-    rc = sessionWaitReady(&session, 60u * MS_PER_SEC);
+    rc = sessionWaitReady(&session, 60u * TIME_PER_SEC);
     if (rc != MS_OK)
     {
         minscanLog(MS_LOG_ERROR, "probe: wait ready: %s", errToString(rc));
@@ -341,7 +341,7 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
             arg_freetable(argtable, sizeof argtable / sizeof argtable[0]);
             return 1;
         }
-        if (divisorForDPI(carrier.type, (unsigned)dpi->ival[0], &div) != MS_OK)
+        if (scanDivisorForDPI(carrier.type, (unsigned)dpi->ival[0], &div) != MS_OK)
         {
             minscanLog(MS_LOG_ERROR, "scan: dpi %d is not a valid %s stage divisor", dpi->ival[0],
                        is35mm ? "35mm" : "120");
@@ -512,7 +512,7 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
 
     if (rc == MS_OK)
     {
-        double par = (double)acquisition.div * (double)imageFrame.rows / (is35mm ? MS_MAX_ROWS_35 : MS_MAX_ROWS_120);
+        double par = (double)acquisition.div * (double)imageFrame.rows / (is35mm ? IMAGE_MAX_ROWS_35 : IMAGE_MAX_ROWS_120);
         rc         = tiffWrite(out->filename[0], &imageFrame, par, rgbi->count != 0, separateIR);
     }
 

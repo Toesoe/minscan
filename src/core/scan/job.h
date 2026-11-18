@@ -22,6 +22,6 @@
  * @param pDescriptorOut output for descriptor
  * @return int status code
  */
-int descriptorBuild(const struct DescriptorParameters *pParams, struct Descriptor *pDescriptorOut);
+int scanBuildDescriptor(const struct DescriptorParameters *pParams, struct Descriptor *pDescriptorOut);
 
 #endif //! JOB_H_

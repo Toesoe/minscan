@@ -17,7 +17,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define MS_PER_SEC 1000u
+#define TIME_PER_SEC 1000u
 
 struct TimeDeadline
 {

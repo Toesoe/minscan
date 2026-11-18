@@ -158,7 +158,7 @@ static int expectRefused(const struct DescriptorParameters *pParams)
 
     memset(&descriptor, 0, sizeof descriptor);
 
-    if (descriptorBuild(pParams, &descriptor) == MS_OK)
+    if (scanBuildDescriptor(pParams, &descriptor) == MS_OK)
     {
         return 1;
     }
@@ -279,18 +279,18 @@ static int checkFormatCodes(void)
         .pExp       = &exposure,
     };
 
-    CHECK(descriptorBuild(&params, &descriptor) == MS_OK);
+    CHECK(scanBuildDescriptor(&params, &descriptor) == MS_OK);
     CHECK(descriptorGetWidth(&descriptor) == 7128);
     CHECK(descriptorGetRows(&descriptor) == 3u * 7128u); // K = 3 on a 6x format
     CHECK(descriptorGetDivisor(&descriptor) == 1);
 
     // a 35 mm format row on a 120 carrier, and the reverse, must refuse
     params.formatCode = 1;
-    CHECK(descriptorBuild(&params, &descriptor) == MS_ERR_RANGE);
+    CHECK(scanBuildDescriptor(&params, &descriptor) == MS_ERR_RANGE);
 
     params.carrier    = MS_CARRIER_35MM;
     params.formatCode = 4;
-    CHECK(descriptorBuild(&params, &descriptor) == MS_ERR_RANGE);
+    CHECK(scanBuildDescriptor(&params, &descriptor) == MS_ERR_RANGE);
 
     return 0;
 }
@@ -316,7 +316,7 @@ int main(void)
         };
 
         CHECK(readGolden(pCase->szFile, &want) == 0);
-        CHECK(descriptorBuild(&params, &got) == MS_OK);
+        CHECK(scanBuildDescriptor(&params, &got) == MS_OK);
         CHECK_BYTES(got.raw, want.raw, (size_t)DESC_LEN);
     }
 
