@@ -312,7 +312,7 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
     }
 
     struct LoadedCarrier carrier = {
-        .carrierType = media,
+        .type        = media,
         .film        = film,
         .formatCode  = formatCode,
         .glassless   = glassless->count != 0,
@@ -498,43 +498,17 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
         minscanLog(MS_LOG_WARN, "scan: terminator read failed; kept %d rows", imageFrame.rows);
     }
 
-    rc = imageCoregPlanes(&imageFrame, is35mm);
+    const struct ImagePostParams postParams = {
+        .is35mm   = is35mm,
+        .ice      = iceEnabled,
+        .div      = acquisition.div,
+        .pBase    = pBase,
+        .baseCols = baseCols,
+    };
 
-    // the 4-plane (IR) readout carries a CCD-edge gain gradient that the
-    // 3-plane readout does not. flatten RGB against the raw IR column profile
-    // before ICE; the 3-plane path is already flat and must stay untouched.
-    if ((rc == MS_OK) && (imageFrame.numPlanes == 4) && (pBase != NULL))
-    {
-        const double baseStrength[3] = {0.103, 0.103, 0.091};
-
-        rc = imageBaseGain(&imageFrame, pBase, baseCols, baseStrength);
-    }
-
+    rc = imagePostprocess(&imageFrame, &postParams);
     free(pBase);
     pBase = NULL;
-
-    // the IR plane is self-normalised for every 4-plane frame: its column
-    // profile is illumination, and ICE turns any residual banding into colour
-    // artefacts. this must run on the linear path too; the RGB planes are
-    // left untouched, so the 16-bit linear output stays raw.
-    if ((rc == MS_OK) && (imageFrame.numPlanes == 4))
-    {
-        rc = imageNormalizeIR(&imageFrame);
-    }
-
-    if ((rc == MS_OK) && iceEnabled)
-    {
-        rc = imageICEApply(&imageFrame, (is35mm ? 4800u : 3200u) / acquisition.div);
-    }
-
-    if (rc == MS_OK)
-    {
-        // vendor 16-bit linear = coregistered wire + per-channel scale.
-        // the scanner already applied the shading; the host applies no colour
-        // flat-field or colour self-norm. this runs after ICE so the repair
-        // fill sees raw wire levels.
-        rc = imageBalanceRgb(&imageFrame, is35mm ? 0.941 : 0.967, is35mm ? 0.940 : 0.953, is35mm ? 1.0 : 1.088);
-    }
 
     if (rc == MS_OK)
     {
@@ -629,7 +603,7 @@ static int cmd_focus(int argc, char **argv, arg_dstr_t res, void *ctx)
     }
 
     struct LoadedCarrier carrier = {
-        .media      = media,
+        .type       = media,
         .film       = film,
         .formatCode = formatCode,
         .glassless  = glassless->count != 0,

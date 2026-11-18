@@ -13,15 +13,15 @@
 #define MINSCAN_SESSION_H_
 
 #include "minscan/exposure.h"
-#include "src/core/scan/request.h"
 #include "minscan/proto.h"
 #include "minscan/transport.h"
 #include "src/core/frame.h"
+#include "src/core/scan/request.h"
 
 #include <stddef.h>
 #include <stdint.h>
 
-/** @brief carrier configuration; supplied by user */
+/** @brief carrier configuration; supplied by user but validated against scanner readings where possible */
 struct LoadedCarrier
 {
     enum Carrier  type;       ///< 35mm or 120

@@ -29,6 +29,28 @@
 #define MS_GAIN_MIN     (0.40)
 #define MS_GAIN_MAX     (2.50)
 
+/** @brief inputs for imagePostprocess */
+struct ImagePostParams
+{
+    bool            is35mm;   ///< 35mm carrier; selects coreg shifts and balance targets
+    bool            ice;      ///< run ICE after the IR normalisation
+    unsigned        div;      ///< resolution divisor, used to derive the ICE dpi
+    const uint16_t *pBase;    ///< ptr to the 0x83 base table; NULL skips the 4-plane base gain
+    int             baseCols; ///< columns in @ref pBase
+};
+
+/**
+ * @brief run the post-acquisition image chain on one frame (pipeline.c)
+ *
+ * @param pFrame frame to process, modified in place
+ * @param pParams chain inputs; see @ref ImagePostParams
+ * @return int status code
+ *
+ * @note order is coreg -> base gain (4-plane only) -> IR normalise -> ICE -> balance. the base gain is gated on a
+ *       4-plane frame and an available table, never on ICE
+ */
+int imagePostprocess(struct Frame *pFrame, const struct ImagePostParams *pParams);
+
 /**
  * @brief calculate amount of bytes in a single wire row (frame.c)
  *

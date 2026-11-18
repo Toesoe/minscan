@@ -33,6 +33,7 @@ core_common_src = files(
     'src/core/image/gain.c',
     'src/core/image/balance.c',
     'src/core/image/ice.c',
+    'src/core/image/pipeline.c',
     'src/core/wire/unpack.c',
     'src/core/wire/descriptor.c',
     'src/core/scan/window.c',

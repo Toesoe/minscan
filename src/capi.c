@@ -410,48 +410,28 @@ int ms_scan(MsSession *session, const MsRequest *request, MsProgressFn progress,
         goto fail_frame;
     }
 
-    rc = imageCoregPlanes(&frame, is35mm);
-    if (rc != MS_OK) goto fail_frame;
-
-    if (frame.numPlanes == 4)
+    if ((frame.numPlanes == 4) && (pBase == NULL))
     {
-        const double baseStrength[3] = {0.103, 0.103, 0.091};
-
-        if (pBase == NULL)
-        {
-            setError(err, errlen, "0x83 base table unavailable");
-            rc = MS_ERR;
-            goto fail_frame;
-        }
-
-        rc = imageBaseGain(&frame, pBase, baseCols, baseStrength);
-        free(pBase);
-        pBase = NULL;
-        if (rc != MS_OK) goto fail_frame;
-
-        rc = imageNormalizeIR(&frame);
-        if (rc != MS_OK) goto fail_frame;
-    }
-    else
-    {
-        free(pBase);
-        pBase = NULL;
+        setError(err, errlen, "0x83 base table unavailable");
+        rc = MS_ERR;
+        goto fail_frame;
     }
 
-    if (request->ice)
-    {
-        rc = imageICEApply(&frame, (unsigned)((is35mm ? 4800u : 3200u) / div));
-        if (rc != MS_OK)
-        {
-            setError(err, errlen, "ice: %s", errToString(rc));
-            goto fail_frame;
-        }
-    }
+    const struct ImagePostParams postParams = {
+        .is35mm   = is35mm,
+        .ice      = request->ice,
+        .div      = div,
+        .pBase    = pBase,
+        .baseCols = baseCols,
+    };
 
-    if (frame.numPlanes >= 3)
+    rc = imagePostprocess(&frame, &postParams);
+    free(pBase);
+    pBase = NULL;
+    if (rc != MS_OK)
     {
-        rc = imageBalanceRgb(&frame, is35mm ? 0.941 : 0.967, is35mm ? 0.940 : 0.953, is35mm ? 1.0 : 1.088);
-        if (rc != MS_OK) goto fail_frame;
+        setError(err, errlen, "image pipeline: %s", errToString(rc));
+        goto fail_frame;
     }
 
     session->frame = frame;
