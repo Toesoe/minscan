@@ -10,14 +10,15 @@
  */
 
 #include "internal.h"
-#include "minscan/error.h"
-#include "minscan/time.h"
+#include "src/core/error.h"
+#include "src/core/log.h"
 #include "src/core/scan/exposure.h"
 #include "src/core/scan/window.h"
 #include "src/core/wire/cdb.h"
 #include "src/core/wire/descriptor.h"
 #include "src/core/wire/pages.h"
 #include "src/core/wire/scsi.h"
+#include "src/platform/time.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -49,11 +50,11 @@ int sessionMaxFrameGroup(enum Carrier carrier, unsigned *pMaxGroup)
 
     switch (carrier)
     {
-        case MS_CARRIER_35MM:
+        case SCAN_CARRIER_35MM:
             *pMaxGroup = PROTO_MAX_FRAME_GROUP_35;
             return MS_OK;
 
-        case MS_CARRIER_120:
+        case SCAN_CARRIER_120:
             *pMaxGroup = PROTO_MAX_FRAME_GROUP_120;
             return MS_OK;
 
@@ -72,11 +73,11 @@ int sessionCarrierForMediaCode(enum ProtoMediaCode code, enum Carrier *pCarrierO
     switch (code)
     {
         case PROTO_MEDIA_CODE_35MM:
-            *pCarrierOut = MS_CARRIER_35MM;
+            *pCarrierOut = SCAN_CARRIER_35MM;
             return MS_OK;
 
         case PROTO_MEDIA_CODE_120:
-            *pCarrierOut = MS_CARRIER_120;
+            *pCarrierOut = SCAN_CARRIER_120;
             return MS_OK;
 
         default:
@@ -127,12 +128,12 @@ int sessionInit(struct Session *pSession, struct Transport *pTransport, struct L
         return MS_ERR_RANGE;
     }
 
-    if (((int)pCarrier->type < (int)MS_CARRIER_35MM) || ((int)pCarrier->type > (int)MS_CARRIER_120))
+    if (((int)pCarrier->type < (int)SCAN_CARRIER_35MM) || ((int)pCarrier->type > (int)SCAN_CARRIER_120))
     {
         return MS_ERR_RANGE;
     }
 
-    if (((int)pCarrier->film < (int)MS_FILM_COLOUR_NEG) || ((int)pCarrier->film > (int)MS_FILM_MONO))
+    if (((int)pCarrier->film < (int)SCAN_FILM_COLOR_NEG) || ((int)pCarrier->film > (int)SCAN_FILM_MONO))
     {
         return MS_ERR_RANGE;
     }
@@ -158,11 +159,11 @@ int sessionInit(struct Session *pSession, struct Transport *pTransport, struct L
         return MS_ERR_RANGE;
     }
 
-    if (((pSession->carrier.type == MS_CARRIER_35MM) && (pFormat->maxDPI != PROTO_MAX_DPI_35MM)) ||
-        ((pSession->carrier.type == MS_CARRIER_120) && (pFormat->maxDPI != PROTO_MAX_DPI_120)))
+    if (((pSession->carrier.type == SCAN_CARRIER_35MM) && (pFormat->maxDPI != PROTO_MAX_DPI_35MM)) ||
+        ((pSession->carrier.type == SCAN_CARRIER_120) && (pFormat->maxDPI != PROTO_MAX_DPI_120)))
     {
         minscanLog(MS_LOG_ERROR, "init: format 0x%02x is not a %s preset", (unsigned)pFormat->codes[0],
-                   pSession->carrier.type == MS_CARRIER_35MM ? "35mm" : "120");
+                   pSession->carrier.type == SCAN_CARRIER_35MM ? "35mm" : "120");
         return MS_ERR_RANGE;
     }
 
@@ -193,8 +194,8 @@ int sessionInit(struct Session *pSession, struct Transport *pTransport, struct L
     if (observed != pSession->carrier.type)
     {
         minscanLog(MS_LOG_ERROR, "init: requested %s but page 0x24 reports %s (0x%02x)",
-                   pSession->carrier.type == MS_CARRIER_35MM ? "35mm" : "120",
-                   observed == MS_CARRIER_35MM ? "35mm" : "120", (unsigned)pSession->page24.media);
+                   pSession->carrier.type == SCAN_CARRIER_35MM ? "35mm" : "120",
+                   observed == SCAN_CARRIER_35MM ? "35mm" : "120", (unsigned)pSession->page24.media);
         return MS_ERR_RANGE;
     }
 
@@ -250,8 +251,8 @@ int sessionWaitReady(struct Session *pSession, unsigned timeoutMs)
 
     while (!timeIsDeadlineExpired(&deadline))
     {
-        int rc =
-            transportExec(pSession->pTransport, cdb, cdbLen, MS_DIR_NONE, nullptr, 0, READY_ATTEMPT_TIMEOUT_MS, &res);
+        int rc = transportExec(pSession->pTransport, cdb, cdbLen, TRANSPORT_DIR_NONE, nullptr, 0,
+                               READY_ATTEMPT_TIMEOUT_MS, &res);
 
         if (rc == MS_ERR_BUSY)
         {
@@ -314,7 +315,7 @@ int sessionReadSatExpTime(struct Session *pSession)
     uint8_t                buf[SAT_BYTES];
     struct TransportResult res;
     size_t                 cdbLen = protoCDBRead(PROTO_SEL_SAT_35, SAT_WORD_35, (uint32_t)sizeof buf, cdb);
-    int rc = sessionExecCdb(pSession, cdb, cdbLen, MS_DIR_IN, buf, sizeof buf, SAT_READ_TIMEOUT_MS, &res);
+    int rc = sessionExecCdb(pSession, cdb, cdbLen, TRANSPORT_DIR_IN, buf, sizeof buf, SAT_READ_TIMEOUT_MS, &res);
 
     if (rc != MS_OK)
     {
@@ -329,7 +330,7 @@ int sessionReadSatExpTime(struct Session *pSession)
     parseSatExpTime(buf, &pSession->sat35);
 
     cdbLen = protoCDBRead(PROTO_SEL_SAT_120, SAT_WORD_120, (uint32_t)sizeof buf, cdb);
-    rc     = sessionExecCdb(pSession, cdb, cdbLen, MS_DIR_IN, buf, sizeof buf, SAT_READ_TIMEOUT_MS, &res);
+    rc     = sessionExecCdb(pSession, cdb, cdbLen, TRANSPORT_DIR_IN, buf, sizeof buf, SAT_READ_TIMEOUT_MS, &res);
 
     if (rc != MS_OK)
     {
@@ -352,12 +353,12 @@ const struct Sat *sessionSatFor(const struct Session *pSession, enum Carrier car
         return nullptr;
     }
 
-    if (carrier == MS_CARRIER_35MM)
+    if (carrier == SCAN_CARRIER_35MM)
     {
         return &pSession->sat35;
     }
 
-    if (carrier == MS_CARRIER_120)
+    if (carrier == SCAN_CARRIER_120)
     {
         return &pSession->sat120;
     }
@@ -390,8 +391,8 @@ int sessionCheckCarrier(struct Session *pSession)
     if (observed != pSession->carrier.type)
     {
         minscanLog(MS_LOG_WARN, "carrier: device reports %s but session is configured for %s",
-                   observed == MS_CARRIER_35MM ? "35mm" : "120",
-                   pSession->carrier.type == MS_CARRIER_35MM ? "35mm" : "120");
+                   observed == SCAN_CARRIER_35MM ? "35mm" : "120",
+                   pSession->carrier.type == SCAN_CARRIER_35MM ? "35mm" : "120");
     }
 
     if (observed != pSession->calibratedMedia)
@@ -399,8 +400,8 @@ int sessionCheckCarrier(struct Session *pSession)
         if (pSession->isCalibrated)
         {
             minscanLog(MS_LOG_INFO, "carrier: %s -> %s; calibration invalidated",
-                       pSession->calibratedMedia == MS_CARRIER_35MM ? "35mm" : "120",
-                       observed == MS_CARRIER_35MM ? "35mm" : "120");
+                       pSession->calibratedMedia == SCAN_CARRIER_35MM ? "35mm" : "120",
+                       observed == SCAN_CARRIER_35MM ? "35mm" : "120");
         }
 
         pSession->isCalibrated    = false;

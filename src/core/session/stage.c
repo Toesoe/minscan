@@ -10,7 +10,8 @@
  */
 
 #include "internal.h"
-#include "minscan/error.h"
+#include "src/core/error.h"
+#include "src/core/log.h"
 #include "src/core/scan/window.h"
 
 int sessionSelectLensStage(struct Session *pSession)

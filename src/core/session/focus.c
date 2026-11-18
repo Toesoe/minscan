@@ -10,8 +10,9 @@
  */
 
 #include "internal.h"
-#include "minscan/error.h"
-#include "minscan/time.h"
+#include "src/core/error.h"
+#include "src/core/log.h"
+#include "src/platform/time.h"
 
 #include <stdlib.h>
 
@@ -179,7 +180,8 @@ static int focusMeasureAt(struct Session *pSession, const struct Descriptor *pBa
         struct TransportResult res;
         uint8_t               *pDst = pBuf + (size_t)read * FOCUS_READ_BYTES;
 
-        rc = sessionExecCdb(pSession, cdb, cdbLen, MS_DIR_IN, pDst, FOCUS_READ_BYTES, SESSION_READ_TIMEOUT_MS, &res);
+        rc = sessionExecCdb(pSession, cdb, cdbLen, TRANSPORT_DIR_IN, pDst, FOCUS_READ_BYTES, SESSION_READ_TIMEOUT_MS,
+                            &res);
 
         if (rc != MS_OK)
         {
@@ -202,7 +204,7 @@ static int focusMeasureAt(struct Session *pSession, const struct Descriptor *pBa
  * @brief build a focus base descriptor and share one read buffer
  *
  * @param pSession pointer to active session
- * @param job MS_JOB_FOCUS or MS_JOB_FOCUS_OPEN; selects the fixed exposure
+ * @param job SCAN_JOB_FOCUS or SCAN_JOB_FOCUS_OPEN; selects the fixed exposure
  * @param pBaseOut output descriptor
  * @param ppBufOut in/out read buffer; allocated on first use and reused afterwards
  * @return int status code
@@ -216,7 +218,7 @@ static int focusSetup(struct Session *pSession, enum Job job, struct Descriptor 
 
     struct Exposure exposure;
 
-    if (job == MS_JOB_FOCUS_OPEN)
+    if (job == SCAN_JOB_FOCUS_OPEN)
     {
         exposure = sessionFocusOpenExposureFor(pSession->carrier.type);
     }
@@ -400,14 +402,14 @@ int sessionAutofocus(struct Session *pSession, unsigned frame, int16_t *pOutFocu
     struct Descriptor openBase;
     uint8_t          *pBuf = nullptr;
 
-    rc = focusSetup(pSession, MS_JOB_FOCUS, &focusBase, &pBuf);
+    rc = focusSetup(pSession, SCAN_JOB_FOCUS, &focusBase, &pBuf);
 
     if (rc != MS_OK)
     {
         return rc;
     }
 
-    rc = focusSetup(pSession, MS_JOB_FOCUS_OPEN, &openBase, &pBuf);
+    rc = focusSetup(pSession, SCAN_JOB_FOCUS_OPEN, &openBase, &pBuf);
 
     if (rc != MS_OK)
     {
@@ -476,7 +478,7 @@ int sessionAutofocus(struct Session *pSession, unsigned frame, int16_t *pOutFocu
 
         if (pSession->pProgress != nullptr)
         {
-            pSession->pProgress(pSession->pProgressCtx, MS_PHASE_FOCUS, ++progressDone, progressTotal);
+            pSession->pProgress(pSession->pProgressCtx, SESSION_PHASE_FOCUS, ++progressDone, progressTotal);
         }
 
         if (metric > bestMetric)
@@ -543,7 +545,7 @@ int sessionAutofocus(struct Session *pSession, unsigned frame, int16_t *pOutFocu
 
         if (pSession->pProgress != nullptr)
         {
-            pSession->pProgress(pSession->pProgressCtx, MS_PHASE_FOCUS, ++progressDone, progressTotal);
+            pSession->pProgress(pSession->pProgressCtx, SESSION_PHASE_FOCUS, ++progressDone, progressTotal);
         }
 
         if (metric > fineMetric)
@@ -632,7 +634,7 @@ int sessionMeasureFocus(struct Session *pSession, int16_t focus, double *pOutSco
     struct Descriptor base;
     uint8_t          *pBuf = nullptr;
 
-    int rc = focusSetup(pSession, MS_JOB_FOCUS, &base, &pBuf);
+    int rc = focusSetup(pSession, SCAN_JOB_FOCUS, &base, &pBuf);
 
     if (rc != MS_OK)
     {

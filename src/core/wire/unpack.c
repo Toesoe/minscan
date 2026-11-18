@@ -9,21 +9,10 @@
  *
  */
 
+#include "unpack.h"
+
 #include "../frame.h"
-#include "minscan/error.h"
-
-//---------------------------------------------------------------------------------------------------------------------
-// exported functions
-//---------------------------------------------------------------------------------------------------------------------
-
-size_t imageWireRowBytes(int cols, int planes)
-{
-    if (cols <= 0 || planes <= 0)
-    {
-        return 0;
-    }
-    return (size_t)cols * (size_t)planes * 2u;
-}
+#include "src/core/error.h"
 
 int imageUnpackRow(struct Frame *pFrame, int row, const uint8_t *pData, size_t dataLen)
 {

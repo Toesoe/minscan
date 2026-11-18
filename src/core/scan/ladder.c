@@ -213,7 +213,7 @@ struct DescriptorIR scanIRParameters(const struct Window *pWindow, const struct 
 {
     struct DescriptorIR ir = {.level = IR_DEFAULT_LEVEL, .p = 0, .q = 0};
 
-    if ((pParams->job == MS_JOB_FOCUS) || (pParams->job == MS_JOB_FOCUS_OPEN))
+    if ((pParams->job == SCAN_JOB_FOCUS) || (pParams->job == SCAN_JOB_FOCUS_OPEN))
     {
         return ir; // focus never reaches 9b90 and keeps the fill default
     }
@@ -230,7 +230,7 @@ struct DescriptorIR scanIRParameters(const struct Window *pWindow, const struct 
     {
         // 120 goes through the A/B tables, every other carrier through C/D; IR or a repeat pass
         // moves to the second table of the pair
-        const bool is120  = (pParams->carrier == MS_CARRIER_120);
+        const bool is120  = (pParams->carrier == SCAN_CARRIER_120);
         const bool repeat = (pWindow->variant == 3) || (passes > 1);
         const char ladder = is120 ? (repeat ? 'B' : 'A') : (repeat ? 'D' : 'C');
 

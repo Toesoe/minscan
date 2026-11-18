@@ -9,9 +9,9 @@
  *
  */
 
-#include "minscan/transport.h"
+#include "transport.h"
 
-#include "minscan/error.h"
+#include "src/core/error.h"
 
 int transportOpen(struct Transport *pTransport, const char *szPath)
 {

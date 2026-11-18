@@ -1,5 +1,6 @@
-#include "minscan/error.h"
-#include "minscan/transport.h"
+#include "src/core/error.h"
+#include "src/core/log.h"
+#include "transport.h"
 
 static int unsupported_open(struct Transport *pTransport, const char *path)
 {

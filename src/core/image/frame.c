@@ -10,10 +10,20 @@
  */
 
 #include "image.h"
-#include "minscan/error.h"
+#include "src/core/error.h"
 
 #include <stdlib.h>
 #include <string.h>
+
+size_t imageWireRowBytes(int cols, int planes)
+{
+    if (cols <= 0 || planes <= 0)
+    {
+        return 0;
+    }
+
+    return (size_t)cols * (size_t)planes * 2u;
+}
 
 int imageFrameAlloc(struct Frame *pFrame, int rows, int cols, int planes)
 {

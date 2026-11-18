@@ -9,8 +9,8 @@
  *
  */
 
-#include "minscan/error.h"
-#include "minscan/time.h"
+#include "src/core/error.h"
+#include "time.h"
 
 int timeDeadlineAfter(unsigned ms, struct TimeDeadline *pOutDeadline)
 {

@@ -13,7 +13,7 @@
 
 #include "exposure.h"
 #include "ladder.h"
-#include "minscan/error.h"
+#include "src/core/error.h"
 #include "window.h"
 
 #include <math.h>
@@ -40,15 +40,15 @@
 /**
  * @brief generate the mode byte (+0x21)
  *
- * @param colour true if scan job is colour, otherwise false
+ * @param color true if scan job is color, otherwise false
  * @param job job type
- * @return uint8_t mode byte: 0xff for colour, arming and focus or 0xfa for a mono scan/prescan
+ * @return uint8_t mode byte: 0xff for color, arming and focus or 0xfa for a mono scan/prescan
  */
-static uint8_t modeByte(bool colour, enum Job job, int class)
+static uint8_t modeByte(bool color, enum Job job, int class)
 {
-    if (colour || (job == MS_JOB_ARM) || (class == 3))
+    if (color || (job == SCAN_JOB_ARM) || (class == 3))
     {
-        return DESC_MODE_COLOUR;
+        return DESC_MODE_COLOR;
     }
 
     return DESC_MODE_MONO;
@@ -70,7 +70,7 @@ static uint8_t featuresFor(int variant, enum Job job)
         features &= (uint8_t)~0x40u;
     }
 
-    if (job == MS_JOB_ARM)
+    if (job == SCAN_JOB_ARM)
     {
         features &= 0x1cu;
     }
@@ -115,7 +115,7 @@ static void tailFor(int class, enum Job job, double ratio, unsigned divisorField
 
     memcpy(pTailOut, initTail, DESC_TAIL_LEN);
 
-    if ((class == 3) || (job == MS_JOB_ARM))
+    if ((class == 3) || (job == SCAN_JOB_ARM))
     {
         // init pattern
     }
@@ -180,19 +180,19 @@ static int validateParams(const struct DescriptorParameters *pParams)
     {
         return MS_ERR_RANGE;
     }
-    if ((pParams->carrier < MS_CARRIER_35MM) || (pParams->carrier > MS_CARRIER_120))
+    if ((pParams->carrier < SCAN_CARRIER_35MM) || (pParams->carrier > SCAN_CARRIER_120))
     {
         return MS_ERR_RANGE;
     }
-    if ((pParams->film < MS_FILM_COLOUR_NEG) || (pParams->film > MS_FILM_MONO))
+    if ((pParams->film < SCAN_FILM_COLOR_NEG) || (pParams->film > SCAN_FILM_MONO))
     {
         return MS_ERR_RANGE;
     }
-    if ((pParams->job < MS_JOB_PRESCAN) || (pParams->job > MS_JOB_FOCUS_OPEN))
+    if ((pParams->job < SCAN_JOB_PRESCAN) || (pParams->job > SCAN_JOB_FOCUS_OPEN))
     {
         return MS_ERR_RANGE;
     }
-    if (pParams->ir && (pParams->film == MS_FILM_MONO))
+    if (pParams->ir && (pParams->film == SCAN_FILM_MONO))
     {
         return MS_ERR_RANGE;
     }
@@ -214,11 +214,11 @@ static int validateParams(const struct DescriptorParameters *pParams)
     }
 
     // a prescan always runs at the stage's prescan dpi (div 8); focus forces div 1
-    if ((pParams->job == MS_JOB_PRESCAN) && (pParams->div != 8))
+    if ((pParams->job == SCAN_JOB_PRESCAN) && (pParams->div != 8))
     {
         return MS_ERR_RANGE;
     }
-    if (((pParams->job == MS_JOB_FOCUS) || (pParams->job == MS_JOB_FOCUS_OPEN)) && (pParams->div != 1))
+    if (((pParams->job == SCAN_JOB_FOCUS) || (pParams->job == SCAN_JOB_FOCUS_OPEN)) && (pParams->div != 1))
     {
         return MS_ERR_RANGE;
     }
@@ -239,7 +239,7 @@ static int validateParams(const struct DescriptorParameters *pParams)
         case 3:
         case 5:
         {
-            if (pParams->job != MS_JOB_FOCUS)
+            if (pParams->job != SCAN_JOB_FOCUS)
             {
                 return MS_ERR_RANGE;
             }
@@ -247,7 +247,7 @@ static int validateParams(const struct DescriptorParameters *pParams)
         }
         case 10:
         {
-            if (pParams->job != MS_JOB_FOCUS_OPEN)
+            if (pParams->job != SCAN_JOB_FOCUS_OPEN)
             {
                 return MS_ERR_RANGE;
             }
@@ -258,7 +258,7 @@ static int validateParams(const struct DescriptorParameters *pParams)
     }
 
     const struct Exposure *pExp  = pParams->pExp;
-    unsigned               limit = (pParams->job == MS_JOB_PRESCAN) ? PRESCAN_EXPOSURE_CAP : SCAN_EXPOSURE_CAP;
+    unsigned               limit = (pParams->job == SCAN_JOB_PRESCAN) ? PRESCAN_EXPOSURE_CAP : SCAN_EXPOSURE_CAP;
 
     if ((pExp->red > limit) || (pExp->green > limit) || (pExp->blue > limit))
     {
@@ -297,10 +297,10 @@ int scanBuildDescriptor(const struct DescriptorParameters *pParams, struct Descr
         return rc;
     }
 
-    const bool colour = (pParams->film != MS_FILM_MONO);
+    const bool color  = (pParams->film != SCAN_FILM_MONO);
     unsigned   passes = pParams->readPasses;
 
-    if (pParams->job == MS_JOB_FOCUS_OPEN)
+    if (pParams->job == SCAN_JOB_FOCUS_OPEN)
     {
         passes = OPENER_READ_PASSES;
     }
@@ -318,7 +318,7 @@ int scanBuildDescriptor(const struct DescriptorParameters *pParams, struct Descr
         .frameAim     = window.frameAim,
         .width        = window.width,
         .scaledRows   = window.scaledRows,
-        .mode         = modeByte(colour, pParams->job, window.class),
+        .mode         = modeByte(color, pParams->job, window.class),
         .focus        = pParams->focus,
         .divisor      = window.divisorField,
         .remainder    = window.remainderField,

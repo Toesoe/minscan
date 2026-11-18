@@ -10,7 +10,8 @@
  */
 
 #include "image.h"
-#include "minscan/error.h"
+#include "src/core/error.h"
+#include "src/core/log.h"
 
 #include <math.h>
 #include <stdlib.h>

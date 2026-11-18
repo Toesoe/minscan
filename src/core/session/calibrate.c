@@ -10,9 +10,10 @@
  */
 
 #include "internal.h"
-#include "minscan/error.h"
-#include "minscan/time.h"
+#include "src/core/error.h"
 #include "src/core/image/image.h"
+#include "src/core/log.h"
+#include "src/platform/time.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -30,7 +31,7 @@ int sessionCalibrate(struct Session *pSession)
     // each state; sending them back-to-back leaves the device mid-move and the next state is lost
     pSession->isCalibrated = false;
 
-    const uint8_t first = (pSession->carrier.type == MS_CARRIER_35MM) ? 0x06 : 0x03;
+    const uint8_t first = (pSession->carrier.type == SCAN_CARRIER_35MM) ? 0x06 : 0x03;
     int           step  = 0;
 
     for (uint8_t state = first; state < (uint8_t)(first + 3u); state++)
@@ -66,7 +67,7 @@ int sessionCalibrate(struct Session *pSession)
 
         if (pSession->pProgress != nullptr)
         {
-            pSession->pProgress(pSession->pProgressCtx, MS_PHASE_CALIBRATE, step, 3);
+            pSession->pProgress(pSession->pProgressCtx, SESSION_PHASE_CALIBRATE, step, 3);
         }
     }
 
@@ -95,7 +96,7 @@ int sessionReadBase(struct Session *pSession, unsigned div, uint16_t **ppBase, i
     *ppBase = nullptr;
     *pCols  = 0;
 
-    const bool     is35mm  = (pSession->carrier.type == MS_CARRIER_35MM);
+    const bool     is35mm  = (pSession->carrier.type == SCAN_CARRIER_35MM);
     const int      srcCols = is35mm ? IMAGE_MAX_COLS_35 : IMAGE_MAX_COLS_120;
     const uint16_t word    = is35mm ? (uint16_t)PROTO_WORD_INIT_BANK0 : (uint16_t)PROTO_WORD_INIT_BANK1;
     const size_t   srcLen  = (size_t)srcCols * 4u * sizeof(uint16_t);

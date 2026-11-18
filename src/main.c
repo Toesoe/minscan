@@ -1,13 +1,14 @@
 #include "argtable3.h"
-#include "minscan/error.h"
-#include "minscan/time.h"
-#include "minscan/transport.h"
+#include "src/core/error.h"
 #include "src/core/image/image.h"
+#include "src/core/image/tiff.h"
+#include "src/core/log.h"
 #include "src/core/scan/window.h"
 #include "src/core/session/session.h"
-#include "src/core/tiff.h"
 #include "src/core/wire/cdb.h"
 #include "src/core/wire/scsi.h"
+#include "src/platform/time.h"
+#include "src/transport/transport.h"
 
 #include <limits.h>
 #include <math.h>
@@ -63,7 +64,7 @@ static int cmd_probe(int argc, char **argv, arg_dstr_t res, void *ctx)
     {
         size_t lenCdb = protoCDBTUR(cdb);
 
-        rc = transportExec(&transport, cdb, lenCdb, MS_DIR_NONE, nullptr, 0, 10000, &result);
+        rc = transportExec(&transport, cdb, lenCdb, TRANSPORT_DIR_NONE, nullptr, 0, 10000, &result);
         if (rc == MS_OK)
         {
             printf("probe: TUR status=%02x host=%04x driver=%04x resid=%d\n", result.status, result.hostStatus,
@@ -82,7 +83,7 @@ static int cmd_probe(int argc, char **argv, arg_dstr_t res, void *ctx)
     if (park->count)
     {
         size_t lenCdb = protoCDBVendor31(0x02, cdb);
-        int    parkRc = transportExec(&transport, cdb, lenCdb, MS_DIR_NONE, nullptr, 0, 10000, &result);
+        int    parkRc = transportExec(&transport, cdb, lenCdb, TRANSPORT_DIR_NONE, nullptr, 0, 10000, &result);
 
         if (parkRc == MS_OK)
         {
@@ -111,32 +112,32 @@ static int parseSize(const char *szSize, enum Carrier *pMediaOut, uint16_t *pFor
 {
     if (strcmp(szSize, "35mm") == 0)
     {
-        *pMediaOut      = MS_CARRIER_35MM;
+        *pMediaOut      = SCAN_CARRIER_35MM;
         *pFormatCodeOut = 1;
     }
     else if (strcmp(szSize, "6x9") == 0)
     {
-        *pMediaOut      = MS_CARRIER_120;
+        *pMediaOut      = SCAN_CARRIER_120;
         *pFormatCodeOut = 0x20;
     }
     else if (strcmp(szSize, "6x8") == 0)
     {
-        *pMediaOut      = MS_CARRIER_120;
+        *pMediaOut      = SCAN_CARRIER_120;
         *pFormatCodeOut = 0x10;
     }
     else if (strcmp(szSize, "6x7") == 0)
     {
-        *pMediaOut      = MS_CARRIER_120;
+        *pMediaOut      = SCAN_CARRIER_120;
         *pFormatCodeOut = 8;
     }
     else if (strcmp(szSize, "6x6") == 0)
     {
-        *pMediaOut      = MS_CARRIER_120;
+        *pMediaOut      = SCAN_CARRIER_120;
         *pFormatCodeOut = 4;
     }
     else if (strcmp(szSize, "6x45") == 0)
     {
-        *pMediaOut      = MS_CARRIER_120;
+        *pMediaOut      = SCAN_CARRIER_120;
         *pFormatCodeOut = 2;
     }
     else
@@ -144,7 +145,7 @@ static int parseSize(const char *szSize, enum Carrier *pMediaOut, uint16_t *pFor
         return MS_ERR_RANGE;
     }
 
-    *pIs35mmOut = (*pMediaOut == MS_CARRIER_35MM);
+    *pIs35mmOut = (*pMediaOut == SCAN_CARRIER_35MM);
     return MS_OK;
 }
 
@@ -152,15 +153,15 @@ static int parseFilm(const char *szFilm, enum FilmType *pFilmOut)
 {
     if (strcmp(szFilm, "bw") == 0)
     {
-        *pFilmOut = MS_FILM_MONO;
+        *pFilmOut = SCAN_FILM_MONO;
     }
     else if (strcmp(szFilm, "colorpos") == 0)
     {
-        *pFilmOut = MS_FILM_COLOUR_POS;
+        *pFilmOut = SCAN_FILM_COLOR_POS;
     }
     else if (strcmp(szFilm, "colorneg") == 0)
     {
-        *pFilmOut = MS_FILM_COLOUR_NEG;
+        *pFilmOut = SCAN_FILM_COLOR_NEG;
     }
     else
     {
@@ -324,7 +325,7 @@ static int cmd_scan(int argc, char **argv, arg_dstr_t res, void *ctx)
 
     struct Acquisition acquisition = {0};
 
-    acquisition.job        = prescan->count ? MS_JOB_PRESCAN : MS_JOB_SCAN;
+    acquisition.job        = prescan->count ? SCAN_JOB_PRESCAN : SCAN_JOB_SCAN;
     acquisition.frameGroup = group;
     acquisition.slot       = slot;
     acquisition.ir         = writeIR || iceEnabled;

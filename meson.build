@@ -20,6 +20,11 @@ add_project_arguments(
 
 inc = include_directories('include')
 
+# Layer boundaries: wire/ must not include scan/, session/ or image/; scan/ must not include
+# session/ or image/; image/ must not include session/. Runs as part of `meson test`.
+py_check = import('python').find_installation()
+test('layer-check', py_check, args: [files('tools/check_layers.py')])
+
 # The embedding library has no TIFF writer, only the CLI and its tests need libtiff.
 core_common_src = files(
     'src/core/log.c',
@@ -47,7 +52,7 @@ core_common_src = files(
     'src/core/session/probe.c',
     'src/core/session/stage.c',
 )
-core_src = core_common_src + files('src/core/tiff.c')
+core_src = core_common_src + files('src/core/image/tiff.c')
 
 platform_src = files('src/platform/time.c')
 if host_machine.system() == 'linux'
@@ -124,17 +129,24 @@ endif
 
 if get_option('build_tests')
   test_inc = include_directories('tests')
-  testdata_dir = meson.current_source_dir() / 'tests' / 'testdata'
-  foreach name : ['test_cdb', 'test_pages', 'test_descriptor', 'test_descriptor_build', 'test_session_guard', 'test_image', 'test_ice', 'test_tiff', 'test_linear', 'test_capi']
-    test_src = files('tests/' + name + '.c')
+  testdata_dir = meson.current_source_dir() / 'tests' / 'scan' / 'testdata'
+  foreach path : [
+    'wire/test_cdb', 'wire/test_pages', 'wire/test_descriptor',
+    'scan/test_descriptor_build',
+    'session/test_session_guard',
+    'image/test_image', 'image/test_ice', 'image/test_tiff', 'image/test_linear',
+    'capi/test_capi',
+  ]
+    name = path.replace('/', '_')
+    test_src = files('tests/' + path + '.c')
     test_deps = [m_dep]
-    if name == 'test_session_guard'
+    if path == 'session/test_session_guard'
       test_src += transport_src
     endif
-    if name == 'test_tiff'
+    if path == 'image/test_tiff'
       test_deps += libtiff_dep
     endif
-    if name == 'test_capi'
+    if path == 'capi/test_capi'
       test_src += transport_src + files('src/capi.c')
       test_deps += libtiff_dep
     endif

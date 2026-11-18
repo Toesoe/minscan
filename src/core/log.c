@@ -1,4 +1,6 @@
-#include "minscan/error.h"
+#include "log.h"
+
+#include "error.h"
 
 #include <stdarg.h>
 #include <stdio.h>

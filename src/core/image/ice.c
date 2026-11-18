@@ -25,7 +25,8 @@
 // the profile constants are Minolta's; see g_iceProfiles. samples are used as
 // delivered: no inversion or colour management
 #include "image.h"
-#include "minscan/error.h"
+#include "src/core/error.h"
+#include "src/core/log.h"
 
 #include <math.h>
 #include <stdbool.h>

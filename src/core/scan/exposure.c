@@ -11,7 +11,7 @@
 
 #include "exposure.h"
 
-#include "minscan/error.h"
+#include "src/core/error.h"
 
 #include <math.h>
 
@@ -46,12 +46,12 @@ int exposureFromSat(const struct Sat *pSat, enum FilmType film, bool glassHolder
         return MS_ERR_RANGE;
     }
 
-    if (film > MS_FILM_MONO)
+    if (film > SCAN_FILM_MONO)
     {
         return MS_ERR_RANGE;
     }
 
-    if (ir && film == MS_FILM_MONO)
+    if (ir && film == SCAN_FILM_MONO)
     {
         return MS_ERR_RANGE;
     }
@@ -78,7 +78,7 @@ int exposureFromSat(const struct Sat *pSat, enum FilmType film, bool glassHolder
 
     switch (film)
     {
-        case MS_FILM_COLOUR_NEG:
+        case SCAN_FILM_COLOR_NEG:
         {
             scale[0] *= COLOR_NEG_GAIN_R;
             scale[1] *= COLOR_NEG_GAIN_G;
@@ -86,7 +86,7 @@ int exposureFromSat(const struct Sat *pSat, enum FilmType film, bool glassHolder
             break;
         }
 
-        case MS_FILM_COLOUR_POS:
+        case SCAN_FILM_COLOR_POS:
         {
             for (int i = 0; i < RGB_CHANNELS; i++)
             {
@@ -113,7 +113,7 @@ int exposureFromSat(const struct Sat *pSat, enum FilmType film, bool glassHolder
     // per-channel setpoints derived using Sat fields read at boot
     int setpoints[RGB_CHANNELS];
 
-    if (film == MS_FILM_MONO)
+    if (film == SCAN_FILM_MONO)
     {
         // B&W film's setpoint is green Sat * red scale
         for (int i = 0; i < RGB_CHANNELS; i++)

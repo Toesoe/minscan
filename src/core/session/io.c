@@ -10,13 +10,14 @@
  */
 
 #include "internal.h"
-#include "minscan/error.h"
-#include "minscan/time.h"
-#include "minscan/transport.h"
+#include "src/core/error.h"
+#include "src/core/log.h"
 #include "src/core/wire/cdb.h"
 #include "src/core/wire/descriptor.h"
 #include "src/core/wire/pages.h"
 #include "src/core/wire/scsi.h"
+#include "src/platform/time.h"
+#include "src/transport/transport.h"
 
 #define IO_RETRY_LIMIT        200
 #define IO_RETRY_MS           100u
@@ -111,7 +112,7 @@ int sessionModeSense(struct Session *pSession, uint8_t page, uint8_t allocLen, u
     uint8_t                cdb[6];
     struct TransportResult res;
     size_t                 cdbLen = protoCDBModeSense(page, allocLen, cdb);
-    int                    rc     = sessionExecCdb(pSession, cdb, cdbLen, MS_DIR_IN, pBuf, len, MODE_TIMEOUT_MS, &res);
+    int rc = sessionExecCdb(pSession, cdb, cdbLen, TRANSPORT_DIR_IN, pBuf, len, MODE_TIMEOUT_MS, &res);
 
     if (rc != MS_OK)
     {
@@ -136,7 +137,7 @@ int sessionModeSelect(struct Session *pSession, uint8_t *pData, size_t len)
     uint8_t                cdb[6];
     struct TransportResult res;
     size_t                 cdbLen = protoCDBModeSelect((uint8_t)len, cdb);
-    int                    rc = sessionExecCdb(pSession, cdb, cdbLen, MS_DIR_OUT, pData, len, MODE_TIMEOUT_MS, &res);
+    int rc = sessionExecCdb(pSession, cdb, cdbLen, TRANSPORT_DIR_OUT, pData, len, MODE_TIMEOUT_MS, &res);
 
     if (rc != MS_OK)
     {
@@ -162,7 +163,7 @@ int sessionWriteDescriptor(struct Session *pSession, const struct Descriptor *pD
         return MS_ERR_RANGE;
     }
 
-    int rc = sessionExecCdb(pSession, cdb, cdbLen, MS_DIR_OUT, (uint8_t *)pDescriptor->raw, DESC_LEN,
+    int rc = sessionExecCdb(pSession, cdb, cdbLen, TRANSPORT_DIR_OUT, (uint8_t *)pDescriptor->raw, DESC_LEN,
                             DESC_WRITE_TIMEOUT_MS, &res);
 
     if (rc != MS_OK)
@@ -189,7 +190,7 @@ int sessionReadParam(struct Session *pSession, uint8_t selector, uint16_t word, 
         return MS_ERR_RANGE;
     }
 
-    int rc = sessionExecCdb(pSession, cdb, cdbLen, MS_DIR_IN, pBuf, len, SESSION_READ_TIMEOUT_MS, &res);
+    int rc = sessionExecCdb(pSession, cdb, cdbLen, TRANSPORT_DIR_IN, pBuf, len, SESSION_READ_TIMEOUT_MS, &res);
 
     if (rc != MS_OK)
     {
@@ -210,7 +211,8 @@ int sessionQuiesce(struct Session *pSession)
     struct TransportResult res;
     size_t                 cdbLen = protoCDBTUR(cdb);
 
-    (void)transportExec(pSession->pTransport, cdb, cdbLen, MS_DIR_NONE, nullptr, 0, SESSION_READ_TIMEOUT_MS, &res);
+    (void)transportExec(pSession->pTransport, cdb, cdbLen, TRANSPORT_DIR_NONE, nullptr, 0, SESSION_READ_TIMEOUT_MS,
+                        &res);
 
     return sessionPark(pSession);
 }
@@ -284,5 +286,5 @@ int sessionPark(struct Session *pSession)
     struct TransportResult res;
     size_t                 n = protoCDBVendor31(PROTO_V31_PARK, cdb);
 
-    return transportExec(pSession->pTransport, cdb, n, MS_DIR_NONE, nullptr, 0, PARK_TIMEOUT_MS, &res);
+    return transportExec(pSession->pTransport, cdb, n, TRANSPORT_DIR_NONE, nullptr, 0, PARK_TIMEOUT_MS, &res);
 }

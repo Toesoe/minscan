@@ -12,8 +12,8 @@
  *       POSIX systems provide both; macOS needs a different sleep backend.
  */
 
-#include "minscan/error.h"
-#include "minscan/time.h"
+#include "src/core/error.h"
+#include "time.h"
 
 #include <errno.h>
 #include <time.h>

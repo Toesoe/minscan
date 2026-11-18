@@ -11,15 +11,15 @@
 
 #include "window.h"
 
-#include "minscan/error.h"
+#include "src/core/error.h"
 #include "src/core/wire/descriptor.h"
 #include "src/core/wire/scsi.h"
 
 #include <math.h>
 #include <stddef.h>
 
-// colour scans are this many reference rows taller; the 120 colour scan cancels it again (see scanResolveWindow)
-#define COLOUR_ROW_DELTA 16
+// color scans are this many reference rows taller; the 120 color scan cancels it again (see scanResolveWindow)
+#define COLOR_ROW_DELTA  16
 // mono film shifts the frame aim by this many rows, scaled by the row unit factor
 #define MONO_AIM_DELTA   8
 // focus blocks read a fixed 256-column window
@@ -67,7 +67,7 @@ static const struct DescriptorFormat formatPresets[] = {
  */
 unsigned scanStageDPI(enum Carrier carrier)
 {
-    if (carrier == MS_CARRIER_120)
+    if (carrier == SCAN_CARRIER_120)
     {
         return PROTO_MAX_DPI_120;
     }
@@ -93,13 +93,13 @@ static int shapeFor(const struct DescriptorParameters *pParams, int *pClassOut, 
 
     switch (pParams->job)
     {
-        case MS_JOB_PRESCAN:
+        case SCAN_JOB_PRESCAN:
         {
             class = 1;
             break;
         }
-        case MS_JOB_FOCUS:
-        case MS_JOB_FOCUS_OPEN:
+        case SCAN_JOB_FOCUS:
+        case SCAN_JOB_FOCUS_OPEN:
         {
             class = 3;
             break;
@@ -111,7 +111,7 @@ static int shapeFor(const struct DescriptorParameters *pParams, int *pClassOut, 
     // variant precedence is arm -> focus -> IR; IR must not override either
     int variant = 0;
 
-    if (pParams->job == MS_JOB_ARM)
+    if (pParams->job == SCAN_JOB_ARM)
     {
         variant = 1;
     }
@@ -149,13 +149,13 @@ static int formatWindowAndAim(const struct DescriptorParameters *pParams, int cl
     {
         switch (pParams->carrier)
         {
-            case MS_CARRIER_35MM:
+            case SCAN_CARRIER_35MM:
             {
                 *pFormatWindowOut = FOCUS_WINDOW_35;
                 *pFrameAimOut     = FOCUS_AIM_35;
                 break;
             }
-            case MS_CARRIER_120:
+            case SCAN_CARRIER_120:
             {
                 *pFormatWindowOut = FOCUS_WINDOW_120;
                 *pFrameAimOut     = FOCUS_AIM_120;
@@ -170,16 +170,16 @@ static int formatWindowAndAim(const struct DescriptorParameters *pParams, int cl
     uint16_t group         = GROUP_120;
     uint16_t stage         = STAGE_120;
     uint16_t aimBase       = AIM_BASE_120;
-    int      rowUnitFactor = (pParams->carrier == MS_CARRIER_35MM) ? 2 : 3;
+    int      rowUnitFactor = (pParams->carrier == SCAN_CARRIER_35MM) ? 2 : 3;
 
-    if (pParams->carrier == MS_CARRIER_35MM)
+    if (pParams->carrier == SCAN_CARRIER_35MM)
     {
         group   = GROUP_35;
         stage   = STAGE_35;
         aimBase = (pParams->slot == 0 ? AIM_BASE_35_A : AIM_BASE_35_B);
     }
 
-    if (pParams->film == MS_FILM_MONO)
+    if (pParams->film == SCAN_FILM_MONO)
     {
         aimBase += MONO_AIM_DELTA;
     }
@@ -229,9 +229,9 @@ const struct DescriptorFormat *scanDefaultFormatFor(enum Carrier carrier)
 {
     switch (carrier)
     {
-        case MS_CARRIER_35MM:
+        case SCAN_CARRIER_35MM:
             return scanFormatByCode(1);
-        case MS_CARRIER_120:
+        case SCAN_CARRIER_120:
             return scanFormatByCode(0x20);
     }
     return nullptr;
@@ -281,13 +281,13 @@ int scanResolveWindow(const struct DescriptorParameters *pParams, struct Window 
     }
 
     // the format row must belong to the configured lens stage
-    if (((pParams->carrier == MS_CARRIER_35MM) && (pFormat->maxDPI != PROTO_MAX_DPI_35MM)) ||
-        ((pParams->carrier == MS_CARRIER_120) && (pFormat->maxDPI != PROTO_MAX_DPI_120)))
+    if (((pParams->carrier == SCAN_CARRIER_35MM) && (pFormat->maxDPI != PROTO_MAX_DPI_35MM)) ||
+        ((pParams->carrier == SCAN_CARRIER_120) && (pFormat->maxDPI != PROTO_MAX_DPI_120)))
     {
         return MS_ERR_RANGE;
     }
 
-    const bool colour = (pParams->film != MS_FILM_MONO);
+    const bool color = (pParams->film != SCAN_FILM_MONO);
 
     int class   = 0;
     int variant = 0;
@@ -316,7 +316,7 @@ int scanResolveWindow(const struct DescriptorParameters *pParams, struct Window 
     {
         return rc;
     }
-    if (pParams->job == MS_JOB_ARM)
+    if (pParams->job == SCAN_JOB_ARM)
     {
         frameAim = 0;
     }
@@ -328,18 +328,18 @@ int scanResolveWindow(const struct DescriptorParameters *pParams, struct Window 
     {
         width = FOCUS_WIDTH;
     }
-    else if (pParams->job != MS_JOB_ARM)
+    else if (pParams->job != SCAN_JOB_ARM)
     {
         int rows = pFormat->height;
 
-        if (colour)
+        if (color)
         {
-            rows += COLOUR_ROW_DELTA;
+            rows += COLOR_ROW_DELTA;
         }
-        if ((pParams->carrier == MS_CARRIER_120) && colour && (pParams->job == MS_JOB_SCAN))
+        if ((pParams->carrier == SCAN_CARRIER_120) && color && (pParams->job == SCAN_JOB_SCAN))
         {
-            // the captured 6x9 colour scan is 16 ref-px shorter; the delta above cancels it
-            rows -= COLOUR_ROW_DELTA;
+            // the captured 6x9 color scan is 16 ref-px shorter; the delta above cancels it
+            rows -= COLOR_ROW_DELTA;
         }
 
         scaledRows = (uint16_t)((unsigned)pFormat->rowUnitFactor * (unsigned)rows);
@@ -356,7 +356,7 @@ int scanResolveWindow(const struct DescriptorParameters *pParams, struct Window 
     uint8_t divisorField   = (uint8_t)divisor;
     uint8_t remainderField = remainder;
 
-    if ((pParams->job == MS_JOB_ARM) || (class == 3))
+    if ((pParams->job == SCAN_JOB_ARM) || (class == 3))
     {
         divisorField   = 1;
         remainderField = 0;

@@ -1,4 +1,4 @@
-#include "minscan/error.h"
+#include "src/core/error.h"
 #include "src/core/scan/window.h"
 #include "src/core/wire/descriptor.h"
 #include "test.h"
@@ -40,8 +40,8 @@ int main(void)
     d.raw[0x21] = 0xff;
     CHECK(descriptorGetMode(&d) == 0xff);
 
-    const struct DescriptorFormat *fmt120 = scanDefaultFormatFor(MS_CARRIER_120);
-    const struct DescriptorFormat *fmt35  = scanDefaultFormatFor(MS_CARRIER_35MM);
+    const struct DescriptorFormat *fmt120 = scanDefaultFormatFor(SCAN_CARRIER_120);
+    const struct DescriptorFormat *fmt35  = scanDefaultFormatFor(SCAN_CARRIER_35MM);
     unsigned                       div    = 0;
 
     CHECK(fmt120 != nullptr);
@@ -56,11 +56,11 @@ int main(void)
     CHECK(fmt35->maxDPI == 4800);
     CHECK(fmt35->rowUnitFactor == 2);
 
-    CHECK(scanDivisorForDPI(MS_CARRIER_120, 400, &div) == MS_OK);
+    CHECK(scanDivisorForDPI(SCAN_CARRIER_120, 400, &div) == MS_OK);
     CHECK(div == 8);
-    CHECK(scanDivisorForDPI(MS_CARRIER_35MM, 1200, &div) == MS_OK);
+    CHECK(scanDivisorForDPI(SCAN_CARRIER_35MM, 1200, &div) == MS_OK);
     CHECK(div == 4);
-    CHECK(scanDivisorForDPI(MS_CARRIER_120, 4000, &div) == MS_ERR_RANGE);
+    CHECK(scanDivisorForDPI(SCAN_CARRIER_120, 4000, &div) == MS_ERR_RANGE);
 
     return 0;
 }

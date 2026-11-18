@@ -151,19 +151,6 @@ int imageBaseGain(struct Frame *pFrame, const uint16_t *pBaseTable, int baseCols
 int imageBalanceRgb(struct Frame *pFrame, double targetG, double targetB, double gainLevel);
 
 /**
- * @brief unpack one wire row into the frame's per-plane buffers (unpack.c)
- *
- * @param pFrame pointer to frame
- * @param row row number
- * @param pData pointer to incoming wire data
- * @param dataLen length of data in pData
- * @return int status code
- *
- * @note wire row is [R][G][B][IR], each plane cols u16 LE
- */
-int imageUnpackRow(struct Frame *pFrame, int row, const uint8_t *pData, size_t dataLen);
-
-/**
  * @brief apply in-place dust/scratch removal
  *
  * @param pFrame pointer to frame

@@ -17,26 +17,26 @@
 /** @brief carrier/lens family */
 enum Carrier
 {
-    MS_CARRIER_35MM = 0, ///< 35 mm 6-frame strip carrier; 4800 dpi stage
-    MS_CARRIER_120  = 1, ///< 120/6x carrier; 3200 dpi stage
+    SCAN_CARRIER_35MM = 0, ///< 35 mm 6-frame strip carrier; 4800 dpi stage
+    SCAN_CARRIER_120  = 1, ///< 120/6x carrier; 3200 dpi stage
 };
 
 /** @brief host-side film identity */
 enum FilmType
 {
-    MS_FILM_COLOUR_NEG = 0, ///< colour negative (orange-mask gain)
-    MS_FILM_COLOUR_POS = 1, ///< colour positive/slide (10/7 gain)
-    MS_FILM_MONO       = 2, ///< black & white (single setpoint)
+    SCAN_FILM_COLOR_NEG = 0, ///< colour negative (orange-mask gain)
+    SCAN_FILM_COLOR_POS = 1, ///< colour positive/slide (10/7 gain)
+    SCAN_FILM_MONO      = 2, ///< black & white (single setpoint)
 };
 
 /** @brief requested operation; shapeFor() maps it to the wire class */
 enum Job
 {
-    MS_JOB_PRESCAN    = 0, ///< low-resolution preview, no arming
-    MS_JOB_SCAN       = 1, ///< full scan, arming descriptor first
-    MS_JOB_ARM        = 2, ///< arming block for a scan
-    MS_JOB_FOCUS      = 3, ///< focus measurement/sweep block
-    MS_JOB_FOCUS_OPEN = 4, ///< low-exposure focus opener
+    SCAN_JOB_PRESCAN    = 0, ///< low-resolution preview, no arming
+    SCAN_JOB_SCAN       = 1, ///< full scan, arming descriptor first
+    SCAN_JOB_ARM        = 2, ///< arming block for a scan
+    SCAN_JOB_FOCUS      = 3, ///< focus measurement/sweep block
+    SCAN_JOB_FOCUS_OPEN = 4, ///< low-exposure focus opener
 };
 
 /** @brief inputs used to build one descriptor */

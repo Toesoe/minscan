@@ -9,9 +9,9 @@
  *
  */
 
-#include "minscan/time.h"
+#include "time.h"
 
-#include "minscan/error.h"
+#include "src/core/error.h"
 
 #include <stddef.h>
 

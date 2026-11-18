@@ -18,26 +18,26 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define MS_SENSE_MAX 32
-#define MS_CDB_MAX   16
+#define TRANSPORT_SENSE_MAX 32
+#define TRANSPORT_CDB_MAX   16
 
 /** @brief data-phase direction for @ref TransportOps::exec */
 enum TransportDirection
 {
-    MS_DIR_NONE = 0, ///< no data phase (TUR, 31/02 park)
-    MS_DIR_IN   = 1, ///< device -> host (READ, MODE SENSE)
-    MS_DIR_OUT  = 2, ///< host -> device (WRITE, MODE SELECT)
+    TRANSPORT_DIR_NONE = 0, ///< no data phase (TUR, 31/02 park)
+    TRANSPORT_DIR_IN   = 1, ///< device -> host (READ, MODE SENSE)
+    TRANSPORT_DIR_OUT  = 2, ///< host -> device (WRITE, MODE SELECT)
 };
 
 /** @brief result of one SCSI command */
 struct TransportResult
 {
-    uint8_t  status;              ///< SCSI status byte: 0x00 GOOD, 0x02 CHECK CONDITION, ...
-    uint16_t hostStatus;          ///< backend host status
-    uint16_t driverStatus;        ///< backend driver status
-    int32_t  resid;               ///< residual bytes: requested minus transferred; 0 on a full transfer
-    uint8_t  sense[MS_SENSE_MAX]; ///< sense data; only meaningful on CHECK CONDITION
-    size_t   senseLen;            ///< valid bytes in @ref sense
+    uint8_t  status;                     ///< SCSI status byte: 0x00 GOOD, 0x02 CHECK CONDITION, ...
+    uint16_t hostStatus;                 ///< backend host status
+    uint16_t driverStatus;               ///< backend driver status
+    int32_t  resid;                      ///< residual bytes: requested minus transferred; 0 on a full transfer
+    uint8_t  sense[TRANSPORT_SENSE_MAX]; ///< sense data; only meaningful on CHECK CONDITION
+    size_t   senseLen;                   ///< valid bytes in @ref sense
 };
 
 struct Transport;

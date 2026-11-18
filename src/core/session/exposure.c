@@ -10,7 +10,7 @@
  */
 
 #include "internal.h"
-#include "minscan/error.h"
+#include "src/core/error.h"
 #include "src/core/scan/job.h"
 
 // fixed focus-measurement exposures
@@ -50,7 +50,7 @@ int sessionDeriveExposure(const struct Session *pSession, const struct Acquisiti
 
     bool glassHolder;
 
-    if (pSession->carrier.type == MS_CARRIER_120)
+    if (pSession->carrier.type == SCAN_CARRIER_120)
     {
         glassHolder = !pSession->carrier.glassless;
     }
@@ -66,7 +66,7 @@ int sessionDeriveExposure(const struct Session *pSession, const struct Acquisiti
         ev = pSession->carrier.ev;
     }
 
-    const bool prescan = (pAcquisition->job == MS_JOB_PRESCAN);
+    const bool prescan = (pAcquisition->job == SCAN_JOB_PRESCAN);
 
     return exposureFromSat(pSat, pSession->carrier.film, glassHolder, ev, prescan, pAcquisition->ir, pOut);
 }
@@ -123,7 +123,7 @@ int sessionBuildFocusDescriptor(const struct Session *pSession, enum Job job, co
 
 struct Exposure sessionFocusExposureFor(enum Carrier carrier)
 {
-    if (carrier == MS_CARRIER_35MM)
+    if (carrier == SCAN_CARRIER_35MM)
     {
         return (struct Exposure){.red = FOCUS_35_RED, .green = FOCUS_35_GREEN, .blue = FOCUS_35_BLUE, .ir = 0};
     }
@@ -132,7 +132,7 @@ struct Exposure sessionFocusExposureFor(enum Carrier carrier)
 
 struct Exposure sessionFocusOpenExposureFor(enum Carrier carrier)
 {
-    if (carrier == MS_CARRIER_35MM)
+    if (carrier == SCAN_CARRIER_35MM)
     {
         return (struct Exposure){.red   = FOCUS_OPEN_35_RED,
                                  .green = FOCUS_OPEN_35_GREEN,

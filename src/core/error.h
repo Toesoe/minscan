@@ -1,7 +1,7 @@
 /**
  * @file error.h
  * @author Toesoe
- * @brief status codes and logging helpers
+ * @brief status codes returned by the public API
  * @version 0.1
  * @date 2026-11-05
  *
@@ -9,10 +9,8 @@
  *
  */
 
-#ifndef MINSCAN_ERROR_H_
-#define MINSCAN_ERROR_H_
-
-#include <stdarg.h>
+#ifndef ERROR_H_
+#define ERROR_H_
 
 /** @brief status returned by every public operation */
 enum ErrorCode
@@ -34,23 +32,4 @@ enum ErrorCode
 /** @brief human-readable status code */
 const char *errToString(int status);
 
-/** @brief verbosity of @ref minscanLog */
-enum LogLevel
-{
-    MS_LOG_NONE  = -1, ///< suppress everything (used by enumeration probes)
-    MS_LOG_ERROR = 0,  ///< hard failures
-    MS_LOG_WARN  = 1,  ///< recoverable/odd conditions
-    MS_LOG_INFO  = 2,  ///< normal progress
-    MS_LOG_DEBUG = 3,  ///< wire/protocol detail
-};
-
-/** @brief set the maximum level emitted by @ref minscanLog */
-void minscanLogSetLevel(enum LogLevel level);
-
-/** @brief current maximum level emitted by @ref minscanLog */
-enum LogLevel minscanLogGetLevel(void);
-
-/** @brief log a formatted message to stderr */
-void minscanLog(enum LogLevel level, const char *fmt, ...);
-
-#endif // MINSCAN_ERROR_H_
+#endif // ERROR_H_

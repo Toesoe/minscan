@@ -1,4 +1,4 @@
-#include "minscan/error.h"
+#include "src/core/error.h"
 #include "src/core/wire/pages.h"
 #include "test.h"
 

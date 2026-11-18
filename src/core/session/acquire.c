@@ -10,9 +10,11 @@
  */
 
 #include "internal.h"
-#include "minscan/error.h"
-#include "minscan/time.h"
+#include "src/core/error.h"
 #include "src/core/image/image.h"
+#include "src/core/log.h"
+#include "src/core/wire/unpack.h"
+#include "src/platform/time.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -48,7 +50,7 @@ static int burstPlanFor(const struct Descriptor *pJob, const struct Acquisition 
         return MS_ERR_RANGE;
     }
 
-    bool     colour     = (descriptorGetMode(pJob) == DESC_MODE_COLOUR);
+    bool     color      = (descriptorGetMode(pJob) == DESC_MODE_COLOR);
     int      planes     = 1;
     int      divisor    = (int)descriptorGetDivisor(pJob);
     int      width      = (int)descriptorGetWidth(pJob);
@@ -56,7 +58,7 @@ static int burstPlanFor(const struct Descriptor *pJob, const struct Acquisition 
     int      scaledRows = (int)descriptorGetRows(pJob);
     uint16_t word       = (uint16_t)PROTO_WORD_DATA_BASE | (uint16_t)rowUnit;
 
-    if (colour)
+    if (color)
     {
         planes = pAcquisition->ir ? 4 : 3;
     }
@@ -74,11 +76,11 @@ static int burstPlanFor(const struct Descriptor *pJob, const struct Acquisition 
         return MS_ERR_PROTO;
     }
 
-    if (colour)
+    if (color)
     {
-        word |= (uint16_t)PROTO_WORD_DATA_COLOUR;
+        word |= (uint16_t)PROTO_WORD_DATA_COLOR;
     }
-    if (pAcquisition->job == MS_JOB_SCAN)
+    if (pAcquisition->job == SCAN_JOB_SCAN)
     {
         word |= (uint16_t)PROTO_WORD_DATA_SCAN;
     }
@@ -89,8 +91,8 @@ static int burstPlanFor(const struct Descriptor *pJob, const struct Acquisition 
     pPlanOut->planes        = planes;
     pPlanOut->rowBytes      = cols * 2 * planes;
     pPlanOut->rows          = rows;
-    pPlanOut->hasTerminator = (pAcquisition->job == MS_JOB_PRESCAN) ||
-                              ((pAcquisition->job == MS_JOB_SCAN) && (pAcquisition->div == 1));
+    pPlanOut->hasTerminator = (pAcquisition->job == SCAN_JOB_PRESCAN) ||
+                              ((pAcquisition->job == SCAN_JOB_SCAN) && (pAcquisition->div == 1));
     return MS_OK;
 }
 
@@ -162,8 +164,8 @@ static int readBurst(struct Session *pSession, const struct Descriptor *pJob, co
         const uint8_t         *pCdb         = isTerminator ? cdbTerminator : cdbRead;
         struct TransportResult res;
 
-        rc = sessionExecCdb(pSession, pCdb, 10, MS_DIR_IN, pWireRow, (size_t)plan.rowBytes, SESSION_READ_TIMEOUT_MS,
-                            &res);
+        rc = sessionExecCdb(pSession, pCdb, 10, TRANSPORT_DIR_IN, pWireRow, (size_t)plan.rowBytes,
+                            SESSION_READ_TIMEOUT_MS, &res);
 
         if ((rc != MS_OK) || (res.status != PROTO_SCSI_GOOD) || (res.resid != 0))
         {
@@ -192,7 +194,7 @@ static int readBurst(struct Session *pSession, const struct Descriptor *pJob, co
 
         if (pSession->pProgress != nullptr)
         {
-            pSession->pProgress(pSession->pProgressCtx, MS_PHASE_SCAN, row + 1, plan.rows);
+            pSession->pProgress(pSession->pProgressCtx, SESSION_PHASE_SCAN, row + 1, plan.rows);
         }
 
         if (pSession->cancelRequested)
@@ -247,8 +249,8 @@ static int runArming(struct Session *pSession, const struct Descriptor *pArm)
         struct TransportResult res;
         size_t                 cdbLen = protoCDBTUR(cdbRead);
 
-        turRc = transportExec(pSession->pTransport, cdbRead, cdbLen, MS_DIR_NONE, nullptr, 0, SESSION_READ_TIMEOUT_MS,
-                              &res);
+        turRc = transportExec(pSession->pTransport, cdbRead, cdbLen, TRANSPORT_DIR_NONE, nullptr, 0,
+                              SESSION_READ_TIMEOUT_MS, &res);
 
         if ((turRc == MS_OK) && (res.status == PROTO_SCSI_GOOD))
         {
@@ -286,7 +288,7 @@ static int validateAcquisition(const struct Session *pSession, const struct Acqu
         return MS_ERR_RANGE;
     }
 
-    if ((pAcquisition->job != MS_JOB_PRESCAN) && (pAcquisition->job != MS_JOB_SCAN))
+    if ((pAcquisition->job != SCAN_JOB_PRESCAN) && (pAcquisition->job != SCAN_JOB_SCAN))
     {
         return MS_ERR_RANGE;
     }
@@ -303,7 +305,7 @@ static int validateAcquisition(const struct Session *pSession, const struct Acqu
             return MS_ERR_RANGE;
     }
 
-    if ((pAcquisition->job == MS_JOB_PRESCAN) && (pAcquisition->div != 8))
+    if ((pAcquisition->job == SCAN_JOB_PRESCAN) && (pAcquisition->div != 8))
     {
         return MS_ERR_RANGE;
     }
@@ -432,9 +434,9 @@ int sessionAcquire(struct Session *pSession, const struct Acquisition *pAcquisit
         sessionQuiesceUnlessTimeout(pSession, rc);
         return acquireError("build job", rc);
     }
-    if (pAcquisition->job == MS_JOB_SCAN)
+    if (pAcquisition->job == SCAN_JOB_SCAN)
     {
-        rc = sessionBuildJobDescriptor(pSession, pAcquisition, MS_JOB_ARM, &exposure, &armDescriptor);
+        rc = sessionBuildJobDescriptor(pSession, pAcquisition, SCAN_JOB_ARM, &exposure, &armDescriptor);
         if (rc != MS_OK)
         {
             sessionQuiesceUnlessTimeout(pSession, rc);

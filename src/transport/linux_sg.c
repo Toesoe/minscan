@@ -9,8 +9,9 @@
  *
  */
 
-#include "minscan/error.h"
-#include "minscan/transport.h"
+#include "src/core/error.h"
+#include "src/core/log.h"
+#include "transport.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -72,7 +73,7 @@ static int linuxSGTransportExec(const struct Transport *pTransport, const uint8_
     {
         return MS_ERR_IO;
     }
-    if (cdbLen > (size_t)MS_CDB_MAX || bufLen > 0xffffffffu)
+    if (cdbLen > (size_t)TRANSPORT_CDB_MAX || bufLen > 0xffffffffu)
     {
         return MS_ERR_RANGE;
     }
@@ -80,7 +81,9 @@ static int linuxSGTransportExec(const struct Transport *pTransport, const uint8_
     memset(&h, 0, sizeof h);
     memset(pRes, 0, sizeof *pRes);
     h.interface_id    = 'S';
-    h.dxfer_direction = dir == MS_DIR_IN ? SG_DXFER_FROM_DEV : dir == MS_DIR_OUT ? SG_DXFER_TO_DEV : SG_DXFER_NONE;
+    h.dxfer_direction = dir == TRANSPORT_DIR_IN  ? SG_DXFER_FROM_DEV :
+                        dir == TRANSPORT_DIR_OUT ? SG_DXFER_TO_DEV :
+                                                   SG_DXFER_NONE;
     h.cmd_len         = (unsigned char)cdbLen;
     h.mx_sb_len       = (unsigned char)sizeof pRes->sense;
     h.dxfer_len       = (unsigned int)bufLen;

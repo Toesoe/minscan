@@ -1,5 +1,5 @@
 #include "minscan/capi.h"
-#include "minscan/error.h"
+#include "src/core/error.h"
 #include "test.h"
 
 #include <string.h>

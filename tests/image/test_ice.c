@@ -5,7 +5,7 @@
 // the scene, noise streams and geometry mirror msscan so a pass means the
 // implementations agree in behaviour, not just shape. exercises the Frame
 // row-stride adapter and the read-only IR plane end to end
-#include "minscan/error.h"
+#include "src/core/error.h"
 #include "src/core/image/image.h"
 #include "test.h"
 

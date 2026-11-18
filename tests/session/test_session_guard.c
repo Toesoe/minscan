@@ -1,4 +1,4 @@
-#include "minscan/error.h"
+#include "src/core/error.h"
 #include "src/core/image/image.h"
 #include "src/core/session/session.h"
 #include "src/core/wire/descriptor.h"
@@ -193,7 +193,7 @@ int main(void)
     struct Transport     transport;
     struct MockState     state;
     struct Session       session;
-    struct LoadedCarrier carrier = {.type = MS_CARRIER_35MM, .film = MS_FILM_MONO};
+    struct LoadedCarrier carrier = {.type = SCAN_CARRIER_35MM, .film = SCAN_FILM_MONO};
 
     // --- init: media must match the configured carrier, both ways ---
     resetMock(&state, PROTO_MEDIA_CODE_35MM, 3, 3200);
@@ -205,7 +205,7 @@ int main(void)
 
     resetMock(&state, PROTO_MEDIA_CODE_35MM, 1, 4800);
     bindMock(&transport, &state);
-    carrier.type = MS_CARRIER_120;
+    carrier.type = SCAN_CARRIER_120;
     CHECK(sessionInit(&session, &transport, &carrier) == MS_ERR_RANGE);
 
     resetMock(&state, PROTO_MEDIA_CODE_NONE, 0, 0);
@@ -214,7 +214,7 @@ int main(void)
 
     resetMock(&state, PROTO_MEDIA_CODE_35MM, 4, 4800);
     bindMock(&transport, &state);
-    carrier.type = MS_CARRIER_35MM;
+    carrier.type = SCAN_CARRIER_35MM;
     CHECK(sessionInit(&session, &transport, &carrier) == MS_ERR_PROTO);
 
     // --- lens: only 4800/3200, and the live page decides the write ---
@@ -222,7 +222,7 @@ int main(void)
     bindMock(&transport, &state);
     memset(&session, 0, sizeof session);
     session.pTransport   = &transport;
-    session.carrier.type = MS_CARRIER_35MM;
+    session.carrier.type = SCAN_CARRIER_35MM;
 
     state.selectCount = 0;
     CHECK(sessionSelectLensStage(&session) == MS_OK);
@@ -242,7 +242,7 @@ int main(void)
     bindMock(&transport, &state);
     memset(&session, 0, sizeof session);
     session.pTransport   = &transport;
-    session.carrier.type = MS_CARRIER_120;
+    session.carrier.type = SCAN_CARRIER_120;
 
     state.selectCount = 0;
     CHECK(sessionSelectLensStage(&session) == MS_OK);
@@ -256,7 +256,7 @@ int main(void)
     bindMock(&transport, &state);
     memset(&session, 0, sizeof session);
     session.pTransport   = &transport;
-    session.carrier.type = MS_CARRIER_35MM;
+    session.carrier.type = SCAN_CARRIER_35MM;
 
     state.selectCount = 0;
     CHECK(sessionSetFrameGroup(&session, 0) == MS_ERR_RANGE);
@@ -279,7 +279,7 @@ int main(void)
     bindMock(&transport, &state);
     memset(&session, 0, sizeof session);
     session.pTransport   = &transport;
-    session.carrier.type = MS_CARRIER_120;
+    session.carrier.type = SCAN_CARRIER_120;
 
     state.selectCount = 0;
     CHECK(sessionSetFrameGroup(&session, 2) == MS_ERR_RANGE);
@@ -298,13 +298,13 @@ int main(void)
     bindMock(&transport, &state);
     memset(&session, 0, sizeof session);
     session.pTransport         = &transport;
-    session.carrier.type       = MS_CARRIER_35MM;
-    session.carrier.film       = MS_FILM_MONO;
+    session.carrier.type       = SCAN_CARRIER_35MM;
+    session.carrier.film       = SCAN_FILM_MONO;
     session.carrier.formatCode = 1;
 
     struct Frame       frame       = {0};
     struct Acquisition acquisition = {
-        .job        = MS_JOB_PRESCAN,
+        .job        = SCAN_JOB_PRESCAN,
         .div        = 8,
         .frameGroup = 1,
         .slot       = 0,
@@ -344,8 +344,8 @@ int main(void)
     // --- one full 35 mm mono prescan through the mock ---
     resetMock(&state, PROTO_MEDIA_CODE_35MM, 1, 3200); // pre-resolution stage
     bindMock(&transport, &state);
-    carrier.type       = MS_CARRIER_35MM;
-    carrier.film       = MS_FILM_MONO;
+    carrier.type       = SCAN_CARRIER_35MM;
+    carrier.film       = SCAN_FILM_MONO;
     carrier.formatCode = 1;
     carrier.glassless  = false;
     carrier.uniA       = 0;
@@ -359,7 +359,7 @@ int main(void)
 
     // a scan does not re-calibrate an already-calibrated carrier
     session.isCalibrated    = true;
-    session.calibratedMedia = MS_CARRIER_35MM;
+    session.calibratedMedia = SCAN_CARRIER_35MM;
 
     state.descriptorCount = 0;
     state.readCount       = 0;
@@ -384,7 +384,7 @@ int main(void)
 
     // --- carrier switch invalidates calibration; eject/reinsert does not ---
     session.isCalibrated    = true;
-    session.calibratedMedia = MS_CARRIER_35MM;
+    session.calibratedMedia = SCAN_CARRIER_35MM;
 
     state.media = PROTO_MEDIA_CODE_35MM;
     CHECK(sessionCheckCarrier(&session) == MS_OK);

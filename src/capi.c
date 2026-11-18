@@ -1,12 +1,13 @@
 #include "minscan/capi.h"
 
-#include "minscan/error.h"
-#include "minscan/transport.h"
+#include "src/core/error.h"
 #include "src/core/image/image.h"
+#include "src/core/log.h"
 #include "src/core/scan/window.h"
 #include "src/core/session/session.h"
 #include "src/core/wire/cdb.h"
 #include "src/core/wire/scsi.h"
+#include "src/transport/transport.h"
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -105,7 +106,7 @@ static bool calibrationRestore(struct Session *pSession, const char *device)
     pSession->calibratedMedia = pEntry->carrier;
     pSession->carrierSwitched = false;
     minscanLog(MS_LOG_DEBUG, "calibrate: reusing cached %s result for %s",
-               pEntry->carrier == MS_CARRIER_35MM ? "35mm" : "120", device);
+               pEntry->carrier == SCAN_CARRIER_35MM ? "35mm" : "120", device);
     return true;
 }
 
@@ -129,7 +130,7 @@ static int carrierToInternal(const MsLoadedCarrier *pIn, struct LoadedCarrier *p
     if ((pIn->film < MS_API_FILM_COLOUR_NEG) || (pIn->film > MS_API_FILM_MONO)) return MS_ERR_RANGE;
 
     memset(pOut, 0, sizeof *pOut);
-    pOut->type       = (pIn->type == MS_API_MEDIA_35MM) ? MS_CARRIER_35MM : MS_CARRIER_120;
+    pOut->type       = (pIn->type == MS_API_MEDIA_35MM) ? SCAN_CARRIER_35MM : SCAN_CARRIER_120;
     pOut->film       = (enum FilmType)pIn->film;
     pOut->formatCode = (uint16_t)pIn->format_code;
     pOut->glassless  = pIn->glassless != 0;
@@ -311,7 +312,7 @@ int ms_scan(MsSession *session, const MsRequest *request, MsProgressFn progress,
     }
     else
     {
-        rc = scanDivisorForDPI(is35mm ? MS_CARRIER_35MM : MS_CARRIER_120, (unsigned)request->dpi, &div);
+        rc = scanDivisorForDPI(is35mm ? SCAN_CARRIER_35MM : SCAN_CARRIER_120, (unsigned)request->dpi, &div);
         if (rc != MS_OK)
         {
             setError(err, errlen, "invalid dpi %d", request->dpi);
@@ -376,7 +377,7 @@ int ms_scan(MsSession *session, const MsRequest *request, MsProgressFn progress,
     if (pS->isCalibrated) calibrationStore(session->device, pS->carrier.type);
 
     struct Acquisition acquisition = {
-        .job        = request->prescan ? MS_JOB_PRESCAN : MS_JOB_SCAN,
+        .job        = request->prescan ? SCAN_JOB_PRESCAN : SCAN_JOB_SCAN,
         .div        = div,
         .frameGroup = (unsigned)(request->frame_group > 0 ? request->frame_group : 0),
         .slot       = (unsigned)(request->slot != 0),
@@ -482,7 +483,7 @@ int ms_eject(MsSession *session, char *err, size_t errlen)
 
     if (n == 0) return MS_ERR_RANGE;
 
-    const int rc = transportExec(&session->transport, cdb, n, MS_DIR_NONE, nullptr, 0, 10000, &res);
+    const int rc = transportExec(&session->transport, cdb, n, TRANSPORT_DIR_NONE, nullptr, 0, 10000, &res);
 
     if (rc != MS_OK)
     {

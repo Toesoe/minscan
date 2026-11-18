@@ -12,11 +12,11 @@
 #ifndef MINSCAN_SESSION_H_
 #define MINSCAN_SESSION_H_
 
-#include "minscan/transport.h"
 #include "src/core/frame.h"
 #include "src/core/scan/exposure.h"
 #include "src/core/scan/request.h"
 #include "src/core/wire/pages.h"
+#include "src/transport/transport.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -51,9 +51,9 @@ typedef void (*FocusLogFn)(void *pCtx, const char *szTag, int16_t focus, double 
 /** @brief coarse progress phases reported by the session */
 enum SessionPhase
 {
-    MS_PHASE_CALIBRATE = 0,
-    MS_PHASE_FOCUS     = 1,
-    MS_PHASE_SCAN      = 2,
+    SESSION_PHASE_CALIBRATE = 0,
+    SESSION_PHASE_FOCUS     = 1,
+    SESSION_PHASE_SCAN      = 2,
 };
 
 /** @brief progress callback: phase, done, total */

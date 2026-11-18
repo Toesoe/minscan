@@ -1,5 +1,6 @@
-#include "minscan/error.h"
+#include "src/core/error.h"
 #include "src/core/image/image.h"
+#include "src/core/wire/unpack.h"
 #include "test.h"
 
 #include <stdint.h>

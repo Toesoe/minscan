@@ -12,7 +12,7 @@
  */
 
 #include "image.h"
-#include "minscan/error.h"
+#include "src/core/error.h"
 
 // the 4-plane readout carries a CCD-edge gain gradient that the 3-plane readout does not
 static const double baseStrength[3] = {0.103, 0.103, 0.091};

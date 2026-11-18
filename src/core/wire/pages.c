@@ -12,8 +12,8 @@
 #include "pages.h"
 
 #include "descriptor.h"
-#include "minscan/error.h"
 #include "scsi.h"
+#include "src/core/error.h"
 
 #include <string.h>
 

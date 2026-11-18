@@ -12,11 +12,11 @@
 #ifndef SESSION_INTERNAL_H_
 #define SESSION_INTERNAL_H_
 
-#include "minscan/transport.h"
 #include "session.h"
 #include "src/core/wire/cdb.h"
 #include "src/core/wire/descriptor.h"
 #include "src/core/wire/scsi.h"
+#include "src/transport/transport.h"
 
 #define SESSION_READ_TIMEOUT_MS 10000u
 #define SESSION_SENSE_FIXED_LEN 14u ///< fixed sense: key at +2, asc at +12, ascq at +13
@@ -45,7 +45,7 @@ int sessionLogScsiError(const char *szOperation, const struct TransportResult *p
  * @param pSession pointer to active session
  * @param pCdb pointer to cdb
  * @param cdbLen length of cdb
- * @param dir command direction (MS_DIR_NONE/IN/OUT)
+ * @param dir command direction (TRANSPORT_DIR_NONE/IN/OUT)
  * @param pBuf pointer to buffer for data phase; can be null
  * @param bufLen length of data in pBuf
  * @param timeoutMs timeout per attempt, in milliseconds
