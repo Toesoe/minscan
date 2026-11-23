@@ -17,9 +17,10 @@ int cmd_probe(int argc, char **argv, arg_dstr_t res, void *ctx)
 
     arg_str_t *device     = arg_strn("d", "device", "<device>", 0, 1, "SCSI device (default: autodetect)");
     arg_lit_t *park       = arg_litn("p", "park", 0, 1, "park scanner after probe");
+    arg_lit_t *verbose    = arg_litn("v", "verbose", 0, 1, "show detection details");
     arg_lit_t *help       = arg_litn("h", "help", 0, 1, "show this help");
     arg_end_t *end        = arg_end(20);
-    void      *argtable[] = {device, park, help, end};
+    void      *argtable[] = {device, park, verbose, help, end};
 
     int nerrors  = arg_parse(argc, argv, argtable);
     int exitcode = 0;
@@ -28,6 +29,11 @@ int cmd_probe(int argc, char **argv, arg_dstr_t res, void *ctx)
     {
         arg_freetable(argtable, sizeof argtable / sizeof argtable[0]);
         return exitcode;
+    }
+
+    if (verbose->count)
+    {
+        minscanLogSetLevel(MS_LOG_INFO);
     }
 
     struct Transport       transport;

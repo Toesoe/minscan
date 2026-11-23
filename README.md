@@ -34,7 +34,7 @@ make sure you have the sg module loaded into your kernel first. `--device` is op
 ./minscan scan -s 6x9 --filmtype colorneg --dpi 3200 --focus auto --rgbi output.tiff
 ```
 
-pass `-d /dev/sg1` (or `-d '\\.\SCSI0:0,0,0'` on Windows) to select a device explicitly.
+pass `-d /dev/sg1` (or `-d '\\.\Scanner0'` on Windows) to select a device explicitly.
 
 <details>
 <summary><code>minscan help</code></summary>

@@ -78,8 +78,10 @@ if get_option('build_cli') or get_option('build_tests')
 endif
 
 transport_src = files('src/transport/transport.c')
+transport_deps = []
 if host_machine.system() == 'windows'
-  transport_src += files('src/transport/win32_spti.c')
+  transport_src += files('src/transport/win32_scsiscan.c')
+  transport_deps += cc.find_library('setupapi')
 elif host_machine.system() == 'linux'
   transport_src += files('src/transport/linux_sg.c')
 else
@@ -108,7 +110,7 @@ endif
 minscan_shared = shared_library('minscan',
   ['src/capi.c'] + core_common_src + platform_src + transport_src,
   include_directories: inc,
-  dependencies: [m_dep],
+  dependencies: [m_dep] + transport_deps,
   install: true,
   install_dir: shared_install_dir,
 )
@@ -138,7 +140,7 @@ if get_option('build_cli')
       'src/cli/cmd_help.c',
     ] + transport_src,
     include_directories: inc,
-    dependencies: [argtable3_dep, libtiff_dep, m_dep],
+    dependencies: [argtable3_dep, libtiff_dep, m_dep] + transport_deps,
     link_with: [core, platform],
     install: true,
   )
@@ -160,6 +162,7 @@ if get_option('build_tests')
     test_deps = [m_dep]
     if path == 'session/test_session_guard'
       test_src += transport_src
+      test_deps += transport_deps
     endif
     if path == 'image/test_tiff'
       test_deps += libtiff_dep
@@ -167,6 +170,7 @@ if get_option('build_tests')
     if path == 'capi/test_capi'
       test_src += transport_src + files('src/capi.c')
       test_deps += libtiff_dep
+      test_deps += transport_deps
     endif
     exe = executable(name,
       test_src,
