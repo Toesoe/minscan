@@ -4,7 +4,7 @@ a clean C23 userland driver for Minolta DiMAGE film scanners. created with a _lo
 
 currently only supports the DiMAGE SCAN Multi PRO (AF-5000), as that's the unit I have. I suspect that all scanners use more or less the same protocol. the tool needs a bit of rework in order to add multi-scanner support, that's on the to-do list.
 
-minscan supports Linux and Windows. Apple ditched Firewire support in macOS so there's no support builtin for now.
+minscan supports Linux and Windows. Apple ditched Firewire support in macOS so there's no support builtin for now. for Windows you will need a driver, see misc/minolta.inf, that should be sufficient.
 
 ## notes
 

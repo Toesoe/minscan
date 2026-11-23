@@ -1,0 +1,165 @@
+; MINOLTA.INF -- (Konica) Minolta Film Scanner Drivers
+;
+; Experimental (Konica) Minolta film scanner driver information file for Microsoft Windows Vista and Windows 7.
+; Use original (Konica) Minolta driver packages for previous versions of Windows.
+;
+; Independently prepared by Vitor Fonseca, Kain Anderson, Matthias Paul and others for the user community.
+; Comes free of charge and without any warranties. Use "AS IS" and at your own risk. Check for updates at:
+;
+; http://www.dyxum.com/dforum/how-to-run-old-minolta-scanners-on-vista-7_topic80321.html
+; http://www.mi-fo.de/forum/index.php?showtopic=30516
+; http://wiki.vitorfonseca.com/%28S%2821yjpc45a3x5weau3ykppm55%29%29/Installing-Minolta-DiMAGE-Scan-Elite-5400-under-Windows-7.ashx
+; http://www.frisno.com/2009/11/konica-minolta-dimage-scan-dual-iv-works-in-vista/
+;
+; In order to further improve this solution, please report back success or any problems you might run into. Thanks.
+;
+; Last edit: 2011-10-02
+;
+[Version]
+Signature="$CHICAGO$"
+Class=Image
+ClassGUID={6BDD1FC6-810F-11D0-BEC7-08002BE2092F}
+Provider=%Provider%
+DriverVer=10/02/2011,3.0.1
+
+[Manufacturer]
+%Manufacturer%=Models
+%Manufacturer%=Models,NTx86
+%Manufacturer%=Models,NTamd64
+
+[Models] ; Windows 9x, Windows NT, Windows 2000
+; USB scanners
+%ModelDS2886%          = USBScanner,USB\VID_0638&PID_026A
+%ModelDS2888%" (USB)"  = USBScanner,USB\VID_0686&PID_4004
+%ModelDS2889%          = USBScanner,USB\VID_0686&PID_400D
+%ModelDS2890%" (USB)"  = USBScanner,USB\VID_0686&PID_400E
+%ModelDS2891%          = USBScanner,USB\VID_132B&PID_000A
+%ModelDS2892%          = USBScanner,USB\VID_132B&PID_0012
+%ModelSC110%           = USBScanner,USB\VID_0638&PID_0A15
+%ModelSC215%           = USBScanner,USB\VID_0638&PID_0A16
+; SCSI scanners
+%ModelQS2880-1%        = SCSIScanner,SCSI\ScannerMINOLTA_#2880___________
+%ModelQS2880-2%        = SCSIScanner,SCSI\ScannerMINOLTA_#2880___________
+%Model2881%            = SCSIScanner,SCSI\ScannerMINOLTA_#2881___________
+%ModelDS2882%          = SCSIScanner,SCSI\ScannerMINOLTA_#2882___________
+%ModelDS2883-1%        = SCSIScanner,SCSI\ScannerMINOLTA_#2883___________
+%ModelDS2883-2%        = SCSIScanner,SCSI\ScannerMINOLTA_#2883___________
+%ModelDS2884%          = SCSIScanner,SCSI\ScannerMINOLTA_#2884___________
+%ModelDS2885%          = SCSIScanner,SCSI\ScannerMINOLTA_#2885___________
+%ModelDS2887%" (SCSI)" = SCSIScanner,SCSI\ScannerMINOLTA_#2887___________
+; FireWire scanners
+%ModelDS2887%" (1394)" = SBP2Scanner,SBP2\MINOLTA&SCANNER_2887&CmdSetID104D8
+%ModelDS2888%" (1394)" = SBP2Scanner,SBP2\MINOLTA&DS_Elite2&CmdSetID104D8
+%ModelDS2890%" (1394)" = SBP2Scanner,SBP2\MINOLTA&DS_Elite5400&CmdSetID104D8
+
+[Models.NTx86] ; Windows XP and later, x86 only
+; USB scanners
+%ModelDS2886%          = USBScanner,USB\VID_0638&PID_026A
+%ModelDS2888%" (USB)"  = USBScanner,USB\VID_0686&PID_4004
+%ModelDS2889%          = USBScanner,USB\VID_0686&PID_400D
+%ModelDS2890%" (USB)"  = USBScanner,USB\VID_0686&PID_400E
+%ModelDS2891%          = USBScanner,USB\VID_132B&PID_000A
+%ModelDS2892%          = USBScanner,USB\VID_132B&PID_0012
+%ModelSC110%           = USBScanner,USB\VID_0638&PID_0A15
+%ModelSC215%           = USBScanner,USB\VID_0638&PID_0A16
+; SCSI scanners
+%ModelQS2880-1%        = SCSIScanner,SCSI\ScannerMINOLTA_#2880___________
+%ModelQS2880-2%        = SCSIScanner,SCSI\ScannerMINOLTA_#2880___________
+%Model2881%            = SCSIScanner,SCSI\ScannerMINOLTA_#2881___________
+%ModelDS2882%          = SCSIScanner,SCSI\ScannerMINOLTA_#2882___________
+%ModelDS2883-1%        = SCSIScanner,SCSI\ScannerMINOLTA_#2883___________
+%ModelDS2883-2%        = SCSIScanner,SCSI\ScannerMINOLTA_#2883___________
+%ModelDS2884%          = SCSIScanner,SCSI\ScannerMINOLTA_#2884___________
+%ModelDS2885%          = SCSIScanner,SCSI\ScannerMINOLTA_#2885___________
+%ModelDS2887%" (SCSI)" = SCSIScanner,SCSI\ScannerMINOLTA_#2887___________
+; FireWire scanners
+%ModelDS2887%" (1394)" = SBP2Scanner,SBP2\MINOLTA&SCANNER_2887&CmdSetID104D8
+%ModelDS2888%" (1394)" = SBP2Scanner,SBP2\MINOLTA&DS_Elite2&CmdSetID104D8
+%ModelDS2890%" (1394)" = SBP2Scanner,SBP2\MINOLTA&DS_Elite5400&CmdSetID104D8
+
+[Models.NTamd64] ; Windows XP and later, AMD 64 / Intel x86-64 only
+; USB scanners
+%ModelDS2886%          = USBScanner,USB\VID_0638&PID_026A
+%ModelDS2888%" (USB)"  = USBScanner,USB\VID_0686&PID_4004
+%ModelDS2889%          = USBScanner,USB\VID_0686&PID_400D
+%ModelDS2890%" (USB)"  = USBScanner,USB\VID_0686&PID_400E
+%ModelDS2891%          = USBScanner,USB\VID_132B&PID_000A
+%ModelDS2892%          = USBScanner,USB\VID_132B&PID_0012
+%ModelSC110%           = USBScanner,USB\VID_0638&PID_0A15
+%ModelSC215%           = USBScanner,USB\VID_0638&PID_0A16
+; SCSI scanners
+%ModelQS2880-1%        = SCSIScanner,SCSI\ScannerMINOLTA_#2880___________
+%ModelQS2880-2%        = SCSIScanner,SCSI\ScannerMINOLTA_#2880___________
+%Model2881%            = SCSIScanner,SCSI\ScannerMINOLTA_#2881___________
+%ModelDS2882%          = SCSIScanner,SCSI\ScannerMINOLTA_#2882___________
+%ModelDS2883-1%        = SCSIScanner,SCSI\ScannerMINOLTA_#2883___________
+%ModelDS2883-2%        = SCSIScanner,SCSI\ScannerMINOLTA_#2883___________
+%ModelDS2884%          = SCSIScanner,SCSI\ScannerMINOLTA_#2884___________
+%ModelDS2885%          = SCSIScanner,SCSI\ScannerMINOLTA_#2885___________
+%ModelDS2887%" (SCSI)" = SCSIScanner,SCSI\ScannerMINOLTA_#2887___________
+; FireWire scanners
+%ModelDS2887%" (1394)" = SBP2Scanner,SBP2\MINOLTA&SCANNER_2887&CmdSetID104D8
+%ModelDS2888%" (1394)" = SBP2Scanner,SBP2\MINOLTA&DS_Elite2&CmdSetID104D8
+%ModelDS2890%" (1394)" = SBP2Scanner,SBP2\MINOLTA&DS_Elite5400&CmdSetID104D8
+
+[USBScanner]
+Include=STI.INF
+Needs=STI.USBSection
+SubClass=StillImage
+DeviceType=1
+DeviceSubType=1
+Capabilities=0
+
+[USBScanner.Services]
+Include=STI.INF
+Needs=STI.USBSection.Services
+
+[SCSIScanner]
+Include=STI.INF
+Needs=STI.SCSISection
+SubClass=StillImage
+DeviceType=1
+DeviceSubType=1
+Capabilities=0
+
+[SCSIScanner.Services]
+Include=STI.INF
+Needs=STI.SCSISection.Services
+
+[SBP2Scanner]
+Include=STI.INF
+Needs=STI.SBP2Section
+SubClass=StillImage
+DeviceType=1
+DeviceSubType=2
+Capabilities=0
+
+[SBP2Scanner.Services]
+Include=STI.INF
+Needs=STI.SBP2Section.Services
+
+[Strings]
+Provider      = "Konica Minolta"
+Manufacturer  = "Konica Minolta"
+;ModelRX1     = "Konica RX-1 / Sony UY-S77"
+;ModelRX2     = "Konica RX-2 / Sony UY-S90"
+;ModelRX3     = "Konica RX-3 / Sony UY-S100"
+ModelSC110    = "Konica Minolta SC-110"
+ModelSC215    = "Konica Minolta SC-215"
+;ModelQS1202  = "Konica Q-Scan QS-1202E / QS-1202U (G621B)"
+ModelQS2880-1 = "Minolta QuickScan 35 QS-2800 / QS-35 (2880-118)"
+ModelQS2880-2 = "Minolta QuickScan 35 Plus QS-2800 / QS-35 (2880-318)"
+Model2881     = "Minolta (2881)"
+ModelDS2882   = "Minolta Dimage Scan Dual F-2400 (2882-102/9971-882)"
+ModelDS2883-1 = "Minolta Dimage Scan Multi F-3000 (2883-102/9971-883)"
+ModelDS2883-2 = "Minolta Dimage Scan Multi II F-3100 (2883-121/9971-881)"
+ModelDS2884   = "Minolta Dimage Scan Speed F-2800 (2884-102/9971-884)"
+ModelDS2885   = "Minolta Dimage Scan Elite F-2900 (2885-102/9971-885)"
+ModelDS2886   = "Minolta Dimage Scan Dual II AF-2820U (2886-101)"
+ModelDS2887   = "Minolta Dimage Scan Multi Pro AF-5000 (2887-101/2887-301)"
+ModelDS2888   = "Minolta Dimage Scan Elite II AF-2920 (2888-101)"
+ModelDS2889   = "Minolta Dimage Scan Dual III AF-2840 (2889-101)"
+ModelDS2890   = "Minolta Dimage Scan Elite 5400 (2890-101)"
+ModelDS2891   = "Konica Minolta Dimage Scan Dual IV AF-3200 (2891-101)"
+ModelDS2892   = "Konica Minolta Dimage Scan Elite 5400 II (2892-101)"
+; EOF
