@@ -11,6 +11,7 @@ int main(void)
     // nullptr/"" now request autodetection, so a bogus explicit path is the deterministic failure case
     CHECK(ms_probe("/nonexistent/minscan-device", nullptr, err, sizeof err) != MS_OK);
     CHECK(ms_open("/nonexistent/minscan-device", err, sizeof err) == nullptr);
+    CHECK(ms_detect(nullptr, 0, err, sizeof err) == MS_ERR_RANGE);
     CHECK(ms_device(nullptr) == nullptr);
     CHECK(ms_frame_geometry(nullptr, nullptr, nullptr, nullptr, nullptr) == MS_ERR_UNINITIALIZED);
     CHECK(ms_frame_plane(nullptr, 0) == nullptr);

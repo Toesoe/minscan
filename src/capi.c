@@ -139,6 +139,38 @@ static int carrierToInternal(const MsLoadedCarrier *pIn, struct LoadedCarrier *p
     return MS_OK;
 }
 
+int ms_detect(char *device, size_t deviceLen, char *err, size_t errlen)
+{
+    if ((err != nullptr) && (errlen > 0)) err[0] = '\0';
+    if ((device == nullptr) || (deviceLen == 0))
+    {
+        setError(err, errlen, "device buffer is required");
+        return MS_ERR_RANGE;
+    }
+
+    const enum LogLevel oldLevel = minscanLogGetLevel();
+
+    minscanLogSetLevel(MS_LOG_NONE);
+
+    const int rc = transportDetect(device, deviceLen);
+
+    minscanLogSetLevel(oldLevel);
+
+    if (rc == MS_ERR_NOT_FOUND)
+    {
+        setError(err, errlen, "no supported scanner found");
+    }
+    else if (rc == MS_ERR_RANGE)
+    {
+        setError(err, errlen, "multiple scanners found; pass a device");
+    }
+    else if (rc != MS_OK)
+    {
+        setError(err, errlen, "detect: %s", errToString(rc));
+    }
+    return rc;
+}
+
 int ms_probe(const char *device, int *media, char *err, size_t errlen)
 {
     if (media != nullptr) *media = -1;

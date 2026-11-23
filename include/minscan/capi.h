@@ -72,6 +72,13 @@ typedef void (*MsProgressFn)(void *ctx, int phase, int done, int total);
  */
 int ms_probe(const char *device, int *media, char *err, size_t errlen);
 
+/** @brief autodetect a supported scanner without opening it
+ *
+ * @p device receives the device string and @p deviceLen is its size. Returns
+ * MS_ERR_NOT_FOUND when nothing is attached.
+ */
+int ms_detect(char *device, size_t deviceLen, char *err, size_t errlen);
+
 /** @brief open the transport; configure before scanning
  *
  * @p device may be nullptr or empty to autodetect a supported scanner.

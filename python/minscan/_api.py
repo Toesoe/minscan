@@ -5,7 +5,6 @@ CFFI ABI binding for ``libminscan``.
 from __future__ import annotations
 
 import ctypes.util
-import glob
 import os
 import subprocess
 import sys
@@ -44,6 +43,7 @@ typedef struct MsRequest {
 typedef void (*MsProgressFn)(void *, int, int, int);
 
 int ms_probe(const char *, int *, char *, size_t);
+int ms_detect(char *, size_t, char *, size_t);
 MsSession *ms_open(const char *, char *, size_t);
 void ms_close(MsSession *);
 const char *ms_device(const MsSession *);
@@ -242,6 +242,18 @@ def _raise(ffi: Any, err: Any, code: int) -> None:
     raise MinscanError(code, message)
 
 
+def detect() -> str | None:
+    """Return the autodetected device path, or None when no scanner is attached."""
+    ffi, lib = load()
+    buf = ffi.new("char[256]")
+    err = ffi.new("char[512]")
+    rc = int(lib.ms_detect(buf, len(buf), err, len(err)))
+    if rc == -12:  # MS_ERR_NOT_FOUND
+        return None
+    _raise(ffi, err, rc)
+    return ffi.string(buf).decode()
+
+
 def probe(device: str | os.PathLike[str] | None = None) -> Media | None:
     """Return the carrier media, or None when a device answers with no carrier.
 
@@ -257,19 +269,27 @@ def probe(device: str | os.PathLike[str] | None = None) -> Media | None:
     return Media(value) if value in (int(Media.FORMAT_35MM), int(Media.FORMAT_120)) else None
 
 
-def devices(pattern: str = "/dev/sg*") -> list[tuple[str, Media | None]]:
-    """Probe every matching device path. Devices that do not answer are skipped."""
-    found: list[tuple[str, Media | None]] = []
-    for path in sorted(glob.glob(pattern)):
-        try:
-            found.append((path, probe(path)))
-        except MinscanError:
-            continue
-    return found
+def devices() -> list[tuple[str, Media | None]]:
+    """Return the autodetected scanner, or an empty list when none is attached.
+
+    The media is None when the scanner is present but not ready to report a
+    carrier yet.
+    """
+    path = detect()
+    if path is None:
+        return []
+    try:
+        media = probe(path)
+    except MinscanError:
+        media = None
+    return [(path, media)]
 
 
 class Session:
     """One open transport, configured for one carrier.
+
+    ``device=None`` asks the library to autodetect a supported scanner; the
+    resolved path is available as :attr:`device` after opening.
 
     The session owns the transport and the last frame. ``scan`` copies the
     frame into numpy arrays and frees the C frame before returning, so callers
