@@ -10,9 +10,12 @@ int cliOpenSession(const char *szTag, const char *szDevice, struct LoadedCarrier
 
     if (rc != MS_OK)
     {
-        minscanLog(MS_LOG_ERROR, "%s: open %s: %s", szTag, szDevice, errToString(rc));
+        minscanLog(MS_LOG_ERROR, "%s: open %s: %s", szTag,
+                   ((szDevice != nullptr) && (szDevice[0] != '\0')) ? szDevice : "auto", errToString(rc));
         return rc;
     }
+
+    minscanLog(MS_LOG_INFO, "%s: device %s", szTag, transportPath(pTransport));
 
     rc = sessionInit(pSession, pTransport, pCarrier);
 

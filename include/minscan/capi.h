@@ -66,16 +66,23 @@ typedef void (*MsProgressFn)(void *ctx, int phase, int done, int total);
 
 /** @brief probe a device without keeping it open (enumeration)
  *
+ * @p device may be nullptr or empty to autodetect a supported scanner.
  * @p media receives @ref MsMedia when a carrier is detected, or -1 when no
  * usable carrier is loaded. It may be nullptr.
  */
 int ms_probe(const char *device, int *media, char *err, size_t errlen);
 
-/** @brief open the transport; configure before scanning */
+/** @brief open the transport; configure before scanning
+ *
+ * @p device may be nullptr or empty to autodetect a supported scanner.
+ */
 MsSession *ms_open(const char *device, char *err, size_t errlen);
 
 /** @brief close the transport and free the last frame */
 void ms_close(MsSession *session);
+
+/** @brief device path the session opened (resolved after autodetect); nullptr for a null session */
+const char *ms_device(const MsSession *session);
 
 /** @brief bind a carrier and read its pages; call again after a carrier switch */
 int ms_configure(MsSession *session, const MsLoadedCarrier *carrier, char *err, size_t errlen);

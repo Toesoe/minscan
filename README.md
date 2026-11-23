@@ -28,11 +28,13 @@ meson test -C build-asan
 
 ## usage
 
-make sure you have the sg module loaded into your kernel first. for a regular scan of a 6x9 color negative with a scanner on /dev/sg1, IR channel in the 4th layer, using the HA-P1 glass holder:
+make sure you have the sg module loaded into your kernel first. `--device` is optional: without it minscan looks for the Minolta scanner itself (`/sys/class/scsi_generic` on Linux, the SCSI port driver on Windows). for a regular scan of a 6x9 color negative, IR channel in the 4th layer, using the HA-P1 glass holder:
 
 ```sh
-./minscan scan -d /dev/sg1 -s 6x9 --filmtype colorneg --dpi 3200 --focus auto --rgbi output.tiff
+./minscan scan -s 6x9 --filmtype colorneg --dpi 3200 --focus auto --rgbi output.tiff
 ```
+
+pass `-d /dev/sg1` (or `-d '\\.\SCSI0:0,0,0'` on Windows) to select a device explicitly.
 
 <details>
 <summary><code>minscan help</code></summary>
@@ -52,15 +54,15 @@ make sure you have the sg module loaded into your kernel first. for a regular sc
 ```text
 scan: acquire a frame
 Usage:
-  minscan  [-h|--help] -d|--device=<device> [-p|--prescan] -s|--size=<6x45|6x6|6x7|6x8|6x9|35mm> [-g|--glassless] -d|--dpi=<dpi> [-e|-v|--exposure_value=<-2.5...2.5>] [-f|--focus=<-250...250|auto>] [--frame=<frame>] --filmtype=<colorneg|colorpos|bw> [--ir] [--ice] [--rgbi] [--calibrate] [--verbose] <file>
+  minscan  [-h|--help] [-d|--device=<device>] [-p|--prescan] -s|--size=<6x45|6x6|6x7|6x8|6x9|35mm> [-g|--glassless] -r|--dpi=<dpi> [-e|-v|--exposure_value=<-2.5...2.5>] [-f|--focus=<-250...250|auto>] [--frame=<frame>] --filmtype=<colorneg|colorpos|bw> [--ir] [--ice] [--rgbi] [--calibrate] [--verbose] <file>
  
 Available options:
   -h, --help                               show this help
-  -d, --device=<device>                    SCSI device
+  -d, --device=<device>                    SCSI device (default: autodetect)
   -p, --prescan                            grab a low-res prescan instead of a full scan
   -s, --size=<6x45|6x6|6x7|6x8|6x9|35mm>   film size (carrier is autodetected)
   -g, --glassless                          use the HA-P2 insert instead of HA-P1 (120 only)
-  -d, --dpi=<dpi>                          DPI for scan (must divide 4800 for 35mm or 3200 for 120)
+  -r, --dpi=<dpi>                          DPI for scan (must divide 4800 for 35mm or 3200 for 120)
   -e, -v, --exposure_value=<-2.5...2.5>    exposure compensation (stops). defaults to 0
   -f, --focus=<-250...250|auto>            auto to perform autofocus, or a manual value. defaults to stored device value
   --frame=<frame>                          frame to scan (35mm: 1..6, 120: 1; default 1)

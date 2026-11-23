@@ -20,6 +20,7 @@
 
 #define TRANSPORT_SENSE_MAX 32
 #define TRANSPORT_CDB_MAX   16
+#define TRANSPORT_PATH_MAX  128
 
 /** @brief data-phase direction for @ref TransportOps::exec */
 enum TransportDirection
@@ -44,6 +45,14 @@ struct Transport;
 /** @brief portable backend vtable */
 struct TransportOps
 {
+    /** @brief find a supported device when the caller did not name one
+     *
+     * @param szPath receives a device string accepted by @ref open
+     * @param pathLen size of @p szPath
+     * @return MS_OK, MS_ERR_NOT_FOUND, or another status
+     */
+    int (*detect)(char *szPath, size_t pathLen);
+
     /** @brief open a device and attach backend state to the handle */
     int (*open)(struct Transport *pTransport, const char *szPath);
 
@@ -59,8 +68,9 @@ struct TransportOps
 /** @brief caller-owned transport handle */
 struct Transport
 {
-    const struct TransportOps *pOps; ///< backend vtable; nullptr on a closed handle
-    void                      *pCtx; ///< backend-private state; nullptr if unopened/closed
+    const struct TransportOps *pOps;                     ///< backend vtable; nullptr on a closed handle
+    void                      *pCtx;                     ///< backend-private state; nullptr if unopened/closed
+    char                       path[TRANSPORT_PATH_MAX]; ///< resolved device string
 };
 
 // implemented by the selected backend
@@ -68,8 +78,24 @@ struct Transport
 /** @brief return the backend vtable for this platform */
 const struct TransportOps *transportGetOps(void);
 
-/** @brief initialize a transport handle for a device */
+/** @brief find a device when the caller did not name one
+ *
+ * @param szPath receives the device string
+ * @param pathLen size of @p szPath
+ * @return int status code
+ */
+int transportDetect(char *szPath, size_t pathLen);
+
+/** @brief initialize a transport handle for a device
+ *
+ * @param pTransport caller-owned handle
+ * @param path device string; nullptr or "" triggers @ref transportDetect
+ * @return int status code
+ */
 int transportOpen(struct Transport *pTransport, const char *path);
+
+/** @brief device string the handle was opened with (resolved after autodetect) */
+const char *transportPath(const struct Transport *pTransport);
 
 // CHECK CONDITION is a completed command; inspect status/sense
 /** @brief execute one CDB on an open transport */

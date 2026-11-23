@@ -26,7 +26,7 @@ int cmd_focus(int argc, char **argv, arg_dstr_t res, void *ctx)
     (void)res;
     (void)ctx;
 
-    arg_str_t *device   = arg_strn("d", "device", "<device>", 1, 1, "SCSI device");
+    arg_str_t *device   = arg_strn("d", "device", "<device>", 0, 1, "SCSI device (default: autodetect)");
     arg_str_t *filmsize = arg_strn("s", "size", "<6x45|6x6|6x7|6x8|6x9|35mm>", 1, 1, "film size (carrier autodetect)");
     arg_str_t *filmtype = arg_strn(nullptr, "type", "<colorneg|colorpos|bw>", 1, 1, "film type");
     arg_int_t *frame = arg_intn(nullptr, "frame_no", "<frame>", 0, 1, "frame to focus (35mm 1..6, 120: 1; default 1)");
@@ -99,7 +99,7 @@ int cmd_focus(int argc, char **argv, arg_dstr_t res, void *ctx)
     struct Transport transport;
     struct Session   session;
 
-    int rc = cliOpenSession("focus", device->sval[0], &carrier, group, &transport, &session);
+    int rc = cliOpenSession("focus", device->count ? device->sval[0] : nullptr, &carrier, group, &transport, &session);
     if (rc != MS_OK)
     {
         arg_freetable(argtable, sizeof argtable / sizeof argtable[0]);

@@ -46,6 +46,7 @@ typedef void (*MsProgressFn)(void *, int, int, int);
 int ms_probe(const char *, int *, char *, size_t);
 MsSession *ms_open(const char *, char *, size_t);
 void ms_close(MsSession *);
+const char *ms_device(const MsSession *);
 int ms_configure(MsSession *, const MsLoadedCarrier *, char *, size_t);
 int ms_calibrate(MsSession *, MsProgressFn, void *, char *, size_t);
 int ms_scan(MsSession *, const MsRequest *, MsProgressFn, void *, char *, size_t);
@@ -80,6 +81,10 @@ class MinscanError(RuntimeError):
 
 class MinscanTransientError(MinscanError):
     """Timeout / busy / not-ready: the caller may retry the operation."""
+
+
+class MinscanNotFound(MinscanError):
+    """No supported scanner was found, and none was named explicitly."""
 
 
 class MinscanCancelled(MinscanError):
@@ -232,15 +237,21 @@ def _raise(ffi: Any, err: Any, code: int) -> None:
         raise MinscanCancelled(code, message)
     if code in (-6, -7, -8):  # timeout / busy / not ready
         raise MinscanTransientError(code, message)
+    if code == -12:  # MS_ERR_NOT_FOUND
+        raise MinscanNotFound(code, message)
     raise MinscanError(code, message)
 
 
-def probe(device: str | os.PathLike[str]) -> Media | None:
-    """Return the carrier media, or None when a device answers with no carrier."""
+def probe(device: str | os.PathLike[str] | None = None) -> Media | None:
+    """Return the carrier media, or None when a device answers with no carrier.
+
+    ``device=None`` asks the library to autodetect a supported scanner.
+    """
     ffi, lib = load()
     media = ffi.new("int *")
     err = ffi.new("char[512]")
-    rc = lib.ms_probe(os.fsencode(os.fspath(device)), media, err, len(err))
+    path = os.fsencode(os.fspath(device)) if device is not None else ffi.NULL
+    rc = lib.ms_probe(path, media, err, len(err))
     _raise(ffi, err, int(rc))
     value = int(media[0])
     return Media(value) if value in (int(Media.FORMAT_35MM), int(Media.FORMAT_120)) else None
@@ -265,19 +276,24 @@ class Session:
     never hold a pointer into the library's buffer.
     """
 
-    def __init__(self, device: str | os.PathLike[str]) -> None:
+    def __init__(self, device: str | os.PathLike[str] | None = None) -> None:
         self._ffi, self._lib = load()
-        self.device = os.fspath(device)
+        self.device = os.fspath(device) if device is not None else ""
         self._session = self._ffi.NULL
         self._closed = False
         self._config: tuple[int, int, int, bool, float] | None = None
         self._media: Media | None = None
 
         err = self._ffi.new("char[512]")
-        session = self._lib.ms_open(os.fsencode(self.device), err, len(err))
+        path = os.fsencode(self.device) if self.device else self._ffi.NULL
+        session = self._lib.ms_open(path, err, len(err))
         if session == self._ffi.NULL:
             raise MinscanError(-1, _error(self._ffi, err))
         self._session = session
+
+        resolved = self._lib.ms_device(self._session)
+        if resolved != self._ffi.NULL:
+            self.device = self._ffi.string(resolved).decode()
 
     # ── configuration ────────────────────────────────────────────────
     def configure(

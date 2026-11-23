@@ -13,22 +13,73 @@
 
 #include "src/core/error.h"
 
-int transportOpen(struct Transport *pTransport, const char *szPath)
-{
-    const struct TransportOps *ops;
+#include <stdio.h>
+#include <string.h>
 
-    if (pTransport == nullptr || szPath == nullptr)
+int transportDetect(char *szPath, size_t pathLen)
+{
+    if ((szPath == nullptr) || (pathLen == 0))
     {
         return MS_ERR_RANGE;
     }
-    ops = transportGetOps();
-    if (ops == nullptr || ops->open == nullptr)
+
+    const struct TransportOps *ops = transportGetOps();
+
+    if ((ops == nullptr) || (ops->detect == nullptr))
     {
         return MS_ERR_UNSUPPORTED;
     }
+
+    szPath[0] = '\0';
+    return ops->detect(szPath, pathLen);
+}
+
+int transportOpen(struct Transport *pTransport, const char *szPath)
+{
+    if (pTransport == nullptr)
+    {
+        return MS_ERR_RANGE;
+    }
+
+    const struct TransportOps *ops = transportGetOps();
+
+    if ((ops == nullptr) || (ops->open == nullptr))
+    {
+        return MS_ERR_UNSUPPORTED;
+    }
+
+    char        detected[TRANSPORT_PATH_MAX];
+    const char *szUse = szPath;
+
+    if ((szPath == nullptr) || (szPath[0] == '\0'))
+    {
+        const int rc = transportDetect(detected, sizeof detected);
+
+        if (rc != MS_OK)
+        {
+            return rc;
+        }
+        szUse = detected;
+    }
+
     pTransport->pOps = ops;
     pTransport->pCtx = nullptr;
-    return ops->open(pTransport, szPath);
+    snprintf(pTransport->path, sizeof pTransport->path, "%s", szUse);
+
+    const int rc = ops->open(pTransport, szUse);
+
+    if (rc != MS_OK)
+    {
+        pTransport->pOps    = nullptr;
+        pTransport->pCtx    = nullptr;
+        pTransport->path[0] = '\0';
+    }
+    return rc;
+}
+
+const char *transportPath(const struct Transport *pTransport)
+{
+    return (pTransport != nullptr) ? pTransport->path : nullptr;
 }
 
 int transportExec(const struct Transport *pTransport, const uint8_t *pCdb, const size_t cdbLen,
@@ -53,6 +104,7 @@ void transportClose(struct Transport *pTransport)
     {
         pTransport->pOps->close(pTransport);
     }
-    pTransport->pOps = nullptr;
-    pTransport->pCtx = nullptr;
+    pTransport->pOps    = nullptr;
+    pTransport->pCtx    = nullptr;
+    pTransport->path[0] = '\0';
 }

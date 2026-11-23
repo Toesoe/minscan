@@ -143,11 +143,6 @@ int ms_probe(const char *device, int *media, char *err, size_t errlen)
 {
     if (media != nullptr) *media = -1;
     if ((err != nullptr) && (errlen > 0)) err[0] = '\0';
-    if ((device == nullptr) || (device[0] == '\0'))
-    {
-        setError(err, errlen, "device is required");
-        return MS_ERR_RANGE;
-    }
 
     const enum LogLevel oldLevel = minscanLogGetLevel();
 
@@ -159,9 +154,14 @@ int ms_probe(const char *device, int *media, char *err, size_t errlen)
     if (rc != MS_OK)
     {
         minscanLogSetLevel(oldLevel);
-        setError(err, errlen, "open %s: %s", device, errToString(rc));
+        setError(err, errlen, "open %s: %s", ((device != nullptr) && (device[0] != '\0')) ? device : "auto",
+                 errToString(rc));
         return rc;
     }
+
+    char szDevice[TRANSPORT_PATH_MAX];
+
+    snprintf(szDevice, sizeof szDevice, "%s", transportPath(&transport));
 
     struct Session session = {0};
     session.pTransport     = &transport;
@@ -179,18 +179,13 @@ int ms_probe(const char *device, int *media, char *err, size_t errlen)
     transportClose(&transport);
     minscanLogSetLevel(oldLevel);
 
-    if (rc != MS_OK) setError(err, errlen, "probe %s: %s", device, errToString(rc));
+    if (rc != MS_OK) setError(err, errlen, "probe %s: %s", szDevice, errToString(rc));
     return rc;
 }
 
 MsSession *ms_open(const char *device, char *err, size_t errlen)
 {
     if ((err != nullptr) && (errlen > 0)) err[0] = '\0';
-    if ((device == nullptr) || (device[0] == '\0'))
-    {
-        setError(err, errlen, "device is required");
-        return nullptr;
-    }
 
     MsSession *pSession = calloc(1, sizeof *pSession);
 
@@ -204,12 +199,13 @@ MsSession *ms_open(const char *device, char *err, size_t errlen)
 
     if (rc != MS_OK)
     {
-        setError(err, errlen, "open %s: %s", device, errToString(rc));
+        setError(err, errlen, "open %s: %s", ((device != nullptr) && (device[0] != '\0')) ? device : "auto",
+                 errToString(rc));
         free(pSession);
         return nullptr;
     }
 
-    snprintf(pSession->device, sizeof pSession->device, "%s", device);
+    snprintf(pSession->device, sizeof pSession->device, "%s", transportPath(&pSession->transport));
     pSession->transportOpen = true;
     return pSession;
 }
@@ -226,6 +222,11 @@ void ms_close(MsSession *session)
     ms_frame_free(session);
     if (session->transportOpen) transportClose(&session->transport);
     free(session);
+}
+
+const char *ms_device(const MsSession *session)
+{
+    return (session != nullptr) ? session->device : nullptr;
 }
 
 int ms_configure(MsSession *session, const MsLoadedCarrier *carrier, char *err, size_t errlen)

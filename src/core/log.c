@@ -33,6 +33,8 @@ const char *errToString(int status)
             return "range error";
         case MS_ERR_NOTIMPL:
             return "not implemented";
+        case MS_ERR_NOT_FOUND:
+            return "not found";
         default:
             return "unknown";
     }

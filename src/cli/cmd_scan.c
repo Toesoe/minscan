@@ -79,14 +79,14 @@ static void scanHelp(arg_dstr_t res, void **argtable, arg_end_t *end, int nerror
  */
 static enum ScanParseResult scanParseArgs(int argc, char **argv, arg_dstr_t res, struct ScanOptions *pOut)
 {
-    arg_str_t *device  = arg_strn("d", "device", "<device>", 1, 1, "SCSI device");
+    arg_str_t *device  = arg_strn("d", "device", "<device>", 0, 1, "SCSI device (default: autodetect)");
     arg_lit_t *prescan = arg_litn("p", "prescan", 0, 1, "grab a low-res prescan instead of a full scan");
     arg_str_t *filmsize =
         arg_strn("s", "size", "<6x45|6x6|6x7|6x8|6x9|35mm>", 1, 1, "film size (carrier is autodetected)");
     arg_lit_t *glassless = arg_litn("g", "glassless", 0, 1, "use the HA-P2 insert instead of HA-P1 (120 only)");
     arg_str_t *filmtype =
         arg_strn(nullptr, "filmtype", "<colorneg|colorpos|bw>", 1, 1, "film type (changes exposure curves)");
-    arg_int_t *dpi   = arg_intn("d", "dpi", "<dpi>", 1, 1, "DPI for scan (must divide 4800 for 35mm or 3200 for 120)");
+    arg_int_t *dpi   = arg_intn("r", "dpi", "<dpi>", 1, 1, "DPI for scan (must divide 4800 for 35mm or 3200 for 120)");
     arg_int_t *frame = arg_intn(nullptr, "frame", "<frame>", 0, 1, "frame to scan (35mm: 1..6, 120: 1; default 1)");
     arg_lit_t *ir    = arg_litn(nullptr, "ir", 0, 1, "acquire IR; write IR channel to sidecar");
     arg_str_t *focus = arg_strn("f", "focus", "<-250...250|auto>", 0, 1,
@@ -129,7 +129,10 @@ static enum ScanParseResult scanParseArgs(int argc, char **argv, arg_dstr_t res,
     // unless every value is in range
 
     *pOut = (struct ScanOptions){0};
-    snprintf(pOut->szDevice, sizeof pOut->szDevice, "%s", device->sval[0]);
+    if (device->count)
+    {
+        snprintf(pOut->szDevice, sizeof pOut->szDevice, "%s", device->sval[0]);
+    }
     snprintf(pOut->szOut, sizeof pOut->szOut, "%s", out->filename[0]);
 
     if (parseSize(filmsize->sval[0], &pOut->media, &pOut->formatCode, &pOut->is35mm) != MS_OK)

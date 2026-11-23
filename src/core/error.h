@@ -27,6 +27,7 @@ enum ErrorCode
     MS_ERR_RANGE         = -9,  ///< value outside the accepted range
     MS_ERR_UNINITIALIZED = -10, ///< a required init step has not been performed
     MS_ERR_NOTIMPL       = -11, ///< deliberately not implemented yet
+    MS_ERR_NOT_FOUND     = -12, ///< no supported device found
 };
 
 /** @brief human-readable status code */

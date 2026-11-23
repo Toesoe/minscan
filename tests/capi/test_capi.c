@@ -8,10 +8,10 @@ int main(void)
 {
     char err[64] = {0};
 
-    CHECK(ms_probe(nullptr, nullptr, err, sizeof err) == MS_ERR_RANGE);
-    CHECK(ms_probe("", nullptr, err, sizeof err) == MS_ERR_RANGE);
-    CHECK(ms_open(nullptr, err, sizeof err) == nullptr);
-    CHECK(ms_open("", err, sizeof err) == nullptr);
+    // nullptr/"" now request autodetection, so a bogus explicit path is the deterministic failure case
+    CHECK(ms_probe("/nonexistent/minscan-device", nullptr, err, sizeof err) != MS_OK);
+    CHECK(ms_open("/nonexistent/minscan-device", err, sizeof err) == nullptr);
+    CHECK(ms_device(nullptr) == nullptr);
     CHECK(ms_frame_geometry(nullptr, nullptr, nullptr, nullptr, nullptr) == MS_ERR_UNINITIALIZED);
     CHECK(ms_frame_plane(nullptr, 0) == nullptr);
     CHECK(ms_configure(nullptr, nullptr, err, sizeof err) == MS_ERR_RANGE);
