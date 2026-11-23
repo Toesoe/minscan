@@ -65,10 +65,15 @@ else
   platform_src += files('src/platform/time_unsupported.c')
 endif
 
+m_dep = cc.find_library('m', required: false)
+if get_option('build_cli') or get_option('build_tests')
+  libtiff_dep = dependency(['libtiff-4', 'tiff'], version: '>=4.7.2', include_type: 'system')
+endif
+
 # Static helpers are only for the CLI and its tests; the shared library compiles
 # the same sources directly and must not pull in libtiff.
 if get_option('build_cli') or get_option('build_tests')
-  core = static_library('mscore', core_src, include_directories: inc)
+  core = static_library('mscore', core_src, include_directories: inc, dependencies: [libtiff_dep])
   platform = static_library('msplatform', platform_src, include_directories: inc)
 endif
 
@@ -81,10 +86,6 @@ else
   transport_src += files('src/transport/unsupported.c')
 endif
 
-m_dep = cc.find_library('m', required: false)
-if get_option('build_cli') or get_option('build_tests')
-  libtiff_dep = dependency('tiff', version: '>=4.7.2', include_type: 'system')
-endif
 if get_option('build_cli')
   argtable3_dep = dependency('argtable3', version: '>=3.3.1', include_type: 'system')
 endif
