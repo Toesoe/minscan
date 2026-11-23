@@ -132,6 +132,7 @@ if get_option('build_cli')
       'src/cli/args.c',
       'src/cli/cancel.c',
       'src/cli/output.c',
+      'src/cli/progress.c',
       'src/cli/session_open.c',
       'src/cli/cmd_probe.c',
       'src/cli/cmd_scan.c',
@@ -156,6 +157,7 @@ if get_option('build_tests')
     'session/test_session_guard',
     'image/test_image', 'image/test_ice', 'image/test_tiff', 'image/test_linear',
     'capi/test_capi',
+    'cli/test_progress',
   ]
     name = path.replace('/', '_')
     test_src = files('tests/' + path + '.c')
@@ -171,6 +173,9 @@ if get_option('build_tests')
       test_src += transport_src + files('src/capi.c')
       test_deps += libtiff_dep
       test_deps += transport_deps
+    endif
+    if path == 'cli/test_progress'
+      test_src += files('src/cli/progress.c')
     endif
     exe = executable(name,
       test_src,

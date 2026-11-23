@@ -1,6 +1,7 @@
 #include "args.h"
 #include "cancel.h"
 #include "commands.h"
+#include "progress.h"
 #include "session_open.h"
 #include "src/core/error.h"
 #include "src/core/image/image.h"
@@ -231,6 +232,31 @@ static enum ScanParseResult scanParseArgs(int argc, char **argv, arg_dstr_t res,
     return SCAN_PARSE_OK;
 }
 
+struct CliScanProgress
+{
+    struct CliProgress progress;
+    const char        *szScanLabel;
+};
+
+static void scanProgressCallback(void *pCtx, int phase, int done, int total)
+{
+    struct CliScanProgress *pProgress = pCtx;
+
+    if (pProgress == nullptr)
+    {
+        return;
+    }
+
+    if (phase == SESSION_PHASE_CALIBRATE)
+    {
+        cliProgressUpdate(&pProgress->progress, phase, "calibrate", done, total, false);
+    }
+    else if (phase == SESSION_PHASE_SCAN)
+    {
+        cliProgressUpdate(&pProgress->progress, phase, pProgress->szScanLabel, done, total, true);
+    }
+}
+
 /**
  * @brief run the parsed scan
  *
@@ -258,11 +284,14 @@ static int scanCapture(const struct ScanOptions *pOpts)
 
     int16_t focusVal = pOpts->focus;
 
-    struct Transport transport;
-    struct Session   session;
-    struct Frame     imageFrame = {0};
-    uint16_t        *pBase      = nullptr;
-    int              baseCols   = 0;
+    struct Transport        transport;
+    struct Session          session;
+    struct Frame            imageFrame    = {0};
+    struct CliScanProgress  calProgress   = {0};
+    struct CliScanProgress  scanProgress  = {.szScanLabel = pOpts->prescan ? "prescan" : "scan"};
+    struct CliFocusProgress focusProgress = {0};
+    uint16_t               *pBase         = nullptr;
+    int                     baseCols      = 0;
 
     int rc = cliOpenSession("scan", pOpts->szDevice, &carrier, pOpts->group, &transport, &session);
     if (rc != MS_OK)
@@ -277,7 +306,16 @@ static int scanCapture(const struct ScanOptions *pOpts)
         minscanLog(MS_LOG_INFO, "scan: calibrating...\n");
         fflush(stdout);
 
+        cliProgressBegin(&calProgress.progress);
+        session.pProgress    = scanProgressCallback;
+        session.pProgressCtx = &calProgress;
+
         rc = sessionCalibrate(&session);
+
+        cliProgressEnd(&calProgress.progress);
+        session.pProgress    = nullptr;
+        session.pProgressCtx = nullptr;
+
         if (rc != MS_OK)
         {
             minscanLog(MS_LOG_ERROR, "scan: calibrate: %s", errToString(rc));
@@ -288,13 +326,19 @@ static int scanCapture(const struct ScanOptions *pOpts)
 
     if (pOpts->autofocus)
     {
+        cliFocusProgressBegin(&focusProgress, sessionFocusCoarseSteps(), sessionFocusFineSteps());
         session.pFocusLog = cliFocusLog;
-        session.pFocusCtx = nullptr;
+        session.pFocusCtx = &focusProgress;
 
         minscanLog(MS_LOG_INFO, "scan: autofocus...\n");
         fflush(stdout);
 
         rc = sessionAutofocus(&session, pOpts->group, &focusVal);
+
+        cliFocusProgressEnd(&focusProgress);
+        session.pFocusLog = nullptr;
+        session.pFocusCtx = nullptr;
+
         if (rc != MS_OK)
         {
             minscanLog(MS_LOG_ERROR, "scan: autofocus: %s", errToString(rc));
@@ -329,12 +373,24 @@ static int scanCapture(const struct ScanOptions *pOpts)
         }
     }
 
+    cliProgressBegin(&scanProgress.progress);
+    session.pProgress    = scanProgressCallback;
+    session.pProgressCtx = &scanProgress;
+
     rc = sessionAcquire(&session, &acquisition, &imageFrame);
+
     if (rc != MS_OK)
     {
+        cliProgressAbort(&scanProgress.progress);
+        session.pProgress    = nullptr;
+        session.pProgressCtx = nullptr;
         minscanLog(MS_LOG_ERROR, "scan: acquire: %s", errToString(rc));
         goto fail;
     }
+
+    cliProgressEnd(&scanProgress.progress);
+    session.pProgress    = nullptr;
+    session.pProgressCtx = nullptr;
 
     if (imageFrame.terminatorFailed)
     {
@@ -373,6 +429,10 @@ static int scanCapture(const struct ScanOptions *pOpts)
     goto done;
 
 fail:
+    cliProgressAbort(&calProgress.progress);
+    cliProgressAbort(&scanProgress.progress);
+    cliFocusProgressEnd(&focusProgress);
+
     if (sessionCancelRequested(&session))
     {
         minscanLog(MS_LOG_WARN, "scan: cancelled");

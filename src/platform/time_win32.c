@@ -39,6 +39,18 @@ static int qpcNow(uint64_t *pSec, uint64_t *pNsec)
     return 0;
 }
 
+uint64_t timeNowMs(void)
+{
+    uint64_t sec;
+    uint64_t nsec;
+
+    if (qpcNow(&sec, &nsec) != 0)
+    {
+        return 0;
+    }
+    return (sec * 1000u) + (nsec / 1000000u);
+}
+
 int timeDeadlineAfter(unsigned ms, struct TimeDeadline *pOutDeadline)
 {
     LARGE_INTEGER counter;

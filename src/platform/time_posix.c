@@ -16,6 +16,17 @@
 #include <errno.h>
 #include <time.h>
 
+uint64_t timeNowMs(void)
+{
+    struct timespec now;
+
+    if ((clock_gettime(CLOCK_MONOTONIC, &now) != 0) || (now.tv_sec < 0))
+    {
+        return 0;
+    }
+    return ((uint64_t)now.tv_sec * 1000u) + ((uint64_t)now.tv_nsec / 1000000u);
+}
+
 int timeDeadlineAfter(unsigned ms, struct TimeDeadline *pOutDeadline)
 {
     struct timespec now;

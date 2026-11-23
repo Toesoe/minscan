@@ -25,6 +25,9 @@ struct TimeDeadline
     uint64_t time_nanosec;
 };
 
+/** @brief monotonic milliseconds since an unspecified epoch; 0 if unavailable */
+uint64_t timeNowMs(void);
+
 /** @brief build a deadline @p ms milliseconds from now */
 int timeDeadlineAfter(unsigned ms, struct TimeDeadline *pOutDeadline);
 

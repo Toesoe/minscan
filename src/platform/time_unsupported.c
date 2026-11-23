@@ -12,6 +12,11 @@
 #include "src/core/error.h"
 #include "time.h"
 
+uint64_t timeNowMs(void)
+{
+    return 0;
+}
+
 int timeDeadlineAfter(unsigned ms, struct TimeDeadline *pOutDeadline)
 {
     (void)ms;

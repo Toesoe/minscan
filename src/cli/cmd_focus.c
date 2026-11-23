@@ -12,6 +12,7 @@
 #include "args.h"
 #include "cancel.h"
 #include "commands.h"
+#include "progress.h"
 #include "session_open.h"
 #include "src/core/error.h"
 #include "src/core/log.h"
@@ -96,8 +97,9 @@ int cmd_focus(int argc, char **argv, arg_dstr_t res, void *ctx)
         .glassless  = glassless->count != 0,
     };
 
-    struct Transport transport;
-    struct Session   session;
+    struct Transport        transport;
+    struct Session          session;
+    struct CliFocusProgress focusProgress = {0};
 
     int rc = cliOpenSession("focus", device->count ? device->sval[0] : nullptr, &carrier, group, &transport, &session);
     if (rc != MS_OK)
@@ -108,8 +110,9 @@ int cmd_focus(int argc, char **argv, arg_dstr_t res, void *ctx)
 
     cliInstallCancel(&session);
 
+    cliFocusProgressBegin(&focusProgress, sessionFocusCoarseSteps(), sessionFocusFineSteps());
     session.pFocusLog = cliFocusLog;
-    session.pFocusCtx = nullptr;
+    session.pFocusCtx = &focusProgress;
 
     int16_t focus = 0;
 
@@ -119,6 +122,7 @@ int cmd_focus(int argc, char **argv, arg_dstr_t res, void *ctx)
 
         focus = (int16_t)set->ival[0];
         rc    = sessionMeasureFocus(&session, focus, &metric);
+        cliFocusProgressEnd(&focusProgress);
         if (rc == MS_OK)
         {
             printf("focus: measured %+d metric %.0f\n", focus, metric);
@@ -130,11 +134,15 @@ int cmd_focus(int argc, char **argv, arg_dstr_t res, void *ctx)
         printf("focus: autofocus...\n");
         fflush(stdout);
         rc = sessionAutofocus(&session, group, &focus);
+        cliFocusProgressEnd(&focusProgress);
         if (rc == MS_OK)
         {
             printf("focus: committed %+d\n", focus);
         }
     }
+
+    session.pFocusLog = nullptr;
+    session.pFocusCtx = nullptr;
 
     const bool cancelled = (rc != MS_OK) && sessionCancelRequested(&session);
 
