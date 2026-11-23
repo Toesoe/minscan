@@ -139,8 +139,10 @@ int sessionInit(struct Session *pSession, struct Transport *pTransport, struct L
     }
 
     memset(pSession, 0, sizeof *pSession);
-    pSession->pTransport = pTransport;
-    pSession->carrier    = *pCarrier;
+    atomic_init(&pSession->cancelRequested, false);
+    pSession->signalCancelRequested = 0;
+    pSession->pTransport            = pTransport;
+    pSession->carrier               = *pCarrier;
 
     const struct DescriptorFormat *pFormat;
 
@@ -251,6 +253,11 @@ int sessionWaitReady(struct Session *pSession, unsigned timeoutMs)
 
     while (!timeIsDeadlineExpired(&deadline))
     {
+        if (sessionCancelRequested(pSession))
+        {
+            return MS_ERR;
+        }
+
         int rc = transportExec(pSession->pTransport, cdb, cdbLen, TRANSPORT_DIR_NONE, nullptr, 0,
                                READY_ATTEMPT_TIMEOUT_MS, &res);
 

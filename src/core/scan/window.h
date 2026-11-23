@@ -17,6 +17,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/** @brief vendor format codes from the FUN_10008ab0 table */
+#define SCAN_FORMAT_35MM    1u
+#define SCAN_FORMAT_6X45    2u
+#define SCAN_FORMAT_6X6     4u
+#define SCAN_FORMAT_6X7     8u
+#define SCAN_FORMAT_6X8     0x10u
+#define SCAN_FORMAT_6X9     0x20u
+#define SCAN_FORMAT_6X9_ALT 0x80u
+
 /** @brief one vendor format-preset row (FUN_10008ab0) */
 struct DescriptorFormat
 {

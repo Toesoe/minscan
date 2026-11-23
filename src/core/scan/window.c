@@ -43,12 +43,12 @@
 #define AIM_BASE_35_B    9158u // slot B is slot A plus one 38 mm pitch (7181 rows @4800)
 
 // vendor format-preset table (FUN_10008ab0)
-static const uint16_t codes35mm[] = {1};
-static const uint16_t codesB680[] = {0x10};
-static const uint16_t codesB690[] = {0x20, 0x80};
-static const uint16_t codesB645[] = {2};
-static const uint16_t codesB660[] = {4};
-static const uint16_t codesB670[] = {8};
+static const uint16_t codes35mm[] = {SCAN_FORMAT_35MM};
+static const uint16_t codesB680[] = {SCAN_FORMAT_6X8};
+static const uint16_t codesB690[] = {SCAN_FORMAT_6X9, SCAN_FORMAT_6X9_ALT};
+static const uint16_t codesB645[] = {SCAN_FORMAT_6X45};
+static const uint16_t codesB660[] = {SCAN_FORMAT_6X6};
+static const uint16_t codesB670[] = {SCAN_FORMAT_6X7};
 
 static const struct DescriptorFormat formatPresets[] = {
     {codes35mm, 1, "35mm",       2, 4728, 7008,  4800, 591, 876,  600},

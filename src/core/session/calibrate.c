@@ -36,7 +36,7 @@ int sessionCalibrate(struct Session *pSession)
 
     for (uint8_t state = first; state < (uint8_t)(first + 3u); state++)
     {
-        if (pSession->cancelRequested)
+        if (sessionCancelRequested(pSession))
         {
             return MS_ERR;
         }

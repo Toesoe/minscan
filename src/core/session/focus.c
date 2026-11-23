@@ -452,7 +452,7 @@ int sessionAutofocus(struct Session *pSession, unsigned frame, int16_t *pOutFocu
     // coarse sweep: three reads per position
     for (int f = sweepStart;; f += direction * FOCUS_SWEEP_STEP)
     {
-        if (pSession->cancelRequested)
+        if (sessionCancelRequested(pSession))
         {
             rc = MS_ERR;
             goto cleanup;
@@ -528,7 +528,7 @@ int sessionAutofocus(struct Session *pSession, unsigned frame, int16_t *pOutFocu
     {
         int f = fineStart + k * direction;
 
-        if (pSession->cancelRequested)
+        if (sessionCancelRequested(pSession))
         {
             rc = MS_ERR;
             goto cleanup;

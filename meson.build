@@ -118,7 +118,18 @@ endif
 
 if get_option('build_cli')
   minscan = executable('minscan',
-    ['src/main.c'] + transport_src,
+    [
+      'src/cli/main.c',
+      'src/cli/args.c',
+      'src/cli/cancel.c',
+      'src/cli/output.c',
+      'src/cli/session_open.c',
+      'src/cli/cmd_probe.c',
+      'src/cli/cmd_scan.c',
+      'src/cli/cmd_focus.c',
+      'src/cli/cmd_eject.c',
+      'src/cli/cmd_help.c',
+    ] + transport_src,
     include_directories: inc,
     dependencies: [argtable3_dep, libtiff_dep, m_dep],
     link_with: [core, platform],

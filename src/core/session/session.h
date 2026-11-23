@@ -18,6 +18,8 @@
 #include "src/core/wire/pages.h"
 #include "src/transport/transport.h"
 
+#include <signal.h>
+#include <stdatomic.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -80,10 +82,18 @@ struct Session
     FocusLogFn pFocusLog; ///< optional focus-step observer
     void      *pFocusCtx; ///< context for @ref pFocusLog
 
-    SessionProgressFn pProgress;       ///< optional coarse progress observer
-    void             *pProgressCtx;    ///< context for @ref pProgress
-    volatile bool     cancelRequested; ///< set by the caller to abort a running scan
+    SessionProgressFn     pProgress;             ///< optional coarse progress observer
+    void                 *pProgressCtx;          ///< context for @ref pProgress
+    _Atomic bool          cancelRequested;       ///< set by the API from another thread
+    volatile sig_atomic_t signalCancelRequested; ///< set by a CLI signal handler
 };
+
+/** @brief true when either an API thread or a signal handler requested cancellation */
+static inline bool sessionCancelRequested(const struct Session *pSession)
+{
+    return atomic_load_explicit(&pSession->cancelRequested, memory_order_relaxed) ||
+           (pSession->signalCancelRequested != 0);
+}
 
 /**
  * @brief bind a transport and carrier, wait for the device, and cache its state

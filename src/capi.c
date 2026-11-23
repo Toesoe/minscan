@@ -264,9 +264,10 @@ int ms_calibrate(MsSession *session, MsProgressFn progress, void *ctx, char *err
     if ((err != nullptr) && (errlen > 0)) err[0] = '\0';
     if ((session == nullptr) || !session->configured) return MS_ERR_UNINITIALIZED;
 
-    session->session.pProgress       = (SessionProgressFn)progress;
-    session->session.pProgressCtx    = ctx;
-    session->session.cancelRequested = false;
+    session->session.pProgress    = (SessionProgressFn)progress;
+    session->session.pProgressCtx = ctx;
+    atomic_store_explicit(&session->session.cancelRequested, false, memory_order_relaxed);
+    session->session.signalCancelRequested = 0;
 
     const int rc = sessionCalibrate(&session->session);
 
@@ -274,6 +275,10 @@ int ms_calibrate(MsSession *session, MsProgressFn progress, void *ctx, char *err
 
     if (rc != MS_OK)
     {
+        if (sessionCancelRequested(&session->session))
+        {
+            (void)sessionPark(&session->session);
+        }
         setError(err, errlen, "calibrate: %s", errToString(rc));
         return rc;
     }
@@ -296,9 +301,10 @@ int ms_scan(MsSession *session, const MsRequest *request, MsProgressFn progress,
     // not force a session reconfigure/calibration when toggled
     pS->carrier.glassless = request->glassless != 0;
 
-    pS->pProgress       = (SessionProgressFn)progress;
-    pS->pProgressCtx    = ctx;
-    pS->cancelRequested = false;
+    pS->pProgress    = (SessionProgressFn)progress;
+    pS->pProgressCtx = ctx;
+    atomic_store_explicit(&pS->cancelRequested, false, memory_order_relaxed);
+    pS->signalCancelRequested = 0;
 
     const bool is35mm = session->carrier.type == MS_API_MEDIA_35MM;
     unsigned   div    = 0;
@@ -405,7 +411,7 @@ int ms_scan(MsSession *session, const MsRequest *request, MsProgressFn progress,
         setError(err, errlen, "acquire: %s", errToString(rc));
         goto fail_frame;
     }
-    if (pS->cancelRequested)
+    if (sessionCancelRequested(pS))
     {
         setError(err, errlen, "cancelled");
         rc = MS_ERR;
@@ -453,7 +459,10 @@ fail:
 
 void ms_cancel(MsSession *session)
 {
-    if (session != nullptr) session->session.cancelRequested = true;
+    if (session != nullptr)
+    {
+        atomic_store_explicit(&session->session.cancelRequested, true, memory_order_relaxed);
+    }
 }
 
 int ms_frame_geometry(const MsSession *session, int *rows, int *cols, int *planes, size_t *row_stride)

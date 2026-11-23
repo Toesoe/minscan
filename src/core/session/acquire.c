@@ -197,7 +197,7 @@ static int readBurst(struct Session *pSession, const struct Descriptor *pJob, co
             pSession->pProgress(pSession->pProgressCtx, SESSION_PHASE_SCAN, row + 1, plan.rows);
         }
 
-        if (pSession->cancelRequested)
+        if (sessionCancelRequested(pSession))
         {
             frameTruncate(pFrame, row + 1, plan.rowBytes);
             free(pWireRow);
@@ -395,6 +395,7 @@ int sessionAcquire(struct Session *pSession, const struct Acquisition *pAcquisit
 
         if (rc != MS_OK)
         {
+            sessionQuiesceUnlessTimeout(pSession, rc);
             return acquireError("calibrate", rc);
         }
     }

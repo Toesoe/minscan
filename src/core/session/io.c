@@ -246,6 +246,11 @@ int sessionWaitIdle(struct Session *pSession, unsigned timeoutMs)
 
     while (!timeIsDeadlineExpired(&deadline))
     {
+        if (sessionCancelRequested(pSession))
+        {
+            return MS_ERR;
+        }
+
         int rc = sessionModeSense(pSession, PROTO_PAGE_JOB, (uint8_t)SESSION_PAGE28_READ_LEN, buf, sizeof buf);
 
         if (rc == MS_OK && protoPage28Parse(buf, sizeof buf, &pSession->page28) == MS_OK)
