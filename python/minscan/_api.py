@@ -375,8 +375,6 @@ class Session:
         self._check_open()
         err = self._ffi.new("char[512]")
         rc = int(self._lib.ms_eject(self._session, err, len(err)))
-        if rc == -11:  # MS_ERR_NOTIMPL
-            return False
         _raise(self._ffi, err, rc)
         return True
 

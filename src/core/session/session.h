@@ -251,4 +251,12 @@ int sessionMeasureFocus(struct Session *pSession, int16_t focus, double *pOutSco
  */
 int sessionPark(struct Session *pSession);
 
+/**
+ * @brief send the vendor eject command (31 00)
+ *
+ * @param pSession pointer to active session
+ * @return int status code
+ */
+int sessionEject(struct Session *pSession);
+
 #endif // MINSCAN_SESSION_H_

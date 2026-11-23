@@ -25,6 +25,7 @@
 #define MODE_TIMEOUT_MS       5000u
 #define DESC_WRITE_TIMEOUT_MS 10000u
 #define PARK_TIMEOUT_MS       10000u
+#define EJECT_TIMEOUT_MS      10000u
 
 #define IDLE_POLL_MS          100u
 #define IDLE_TIMEOUT_MS       (10u * TIME_PER_SEC)
@@ -292,4 +293,30 @@ int sessionPark(struct Session *pSession)
     size_t                 n = protoCDBVendor31(PROTO_V31_PARK, cdb);
 
     return transportExec(pSession->pTransport, cdb, n, TRANSPORT_DIR_NONE, nullptr, 0, PARK_TIMEOUT_MS, &res);
+}
+
+int sessionEject(struct Session *pSession)
+{
+    if (pSession == nullptr || pSession->pTransport == nullptr)
+    {
+        return MS_ERR_RANGE;
+    }
+
+    uint8_t                cdb[10];
+    struct TransportResult res = {0};
+    size_t                 n   = protoCDBVendor31(PROTO_V31_EJECT, cdb);
+
+    int rc = transportExec(pSession->pTransport, cdb, n, TRANSPORT_DIR_NONE, nullptr, 0, EJECT_TIMEOUT_MS, &res);
+
+    if (rc != MS_OK)
+    {
+        return rc;
+    }
+
+    if (res.status != PROTO_SCSI_GOOD || res.resid != 0)
+    {
+        return sessionLogScsiError("eject", &res);
+    }
+
+    return MS_OK;
 }

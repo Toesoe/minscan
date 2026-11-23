@@ -202,6 +202,7 @@ int main(void)
     CHECK(session.frameGroup == 3);
     CHECK(session.dpi == 3200);
     CHECK(session.focus == 45);
+    CHECK(sessionEject(&session) == MS_OK);
 
     resetMock(&state, PROTO_MEDIA_CODE_35MM, 1, 4800);
     bindMock(&transport, &state);

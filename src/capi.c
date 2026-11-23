@@ -486,23 +486,12 @@ int ms_eject(MsSession *session, char *err, size_t errlen)
     if ((err != nullptr) && (errlen > 0)) err[0] = '\0';
     if (session == nullptr) return MS_ERR_RANGE;
 
-    uint8_t                cdb[10];
-    struct TransportResult res;
-    const size_t           n = protoCDBVendor31(PROTO_V31_EJECT, cdb);
-
-    if (n == 0) return MS_ERR_RANGE;
-
-    const int rc = transportExec(&session->transport, cdb, n, TRANSPORT_DIR_NONE, nullptr, 0, 10000, &res);
+    const int rc = sessionEject(&session->session);
 
     if (rc != MS_OK)
     {
         setError(err, errlen, "eject: %s", errToString(rc));
         return rc;
-    }
-    if (res.status != PROTO_SCSI_GOOD)
-    {
-        setError(err, errlen, "eject: SCSI status 0x%02x", (unsigned)res.status);
-        return MS_ERR_PROTO;
     }
     return MS_OK;
 }
