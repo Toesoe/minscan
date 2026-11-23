@@ -11,6 +11,7 @@
 
 #include "image.h"
 #include "src/core/error.h"
+#include "src/platform/mem.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -61,7 +62,7 @@ int imageFrameAlloc(struct Frame *pFrame, int rows, int cols, int planes)
     // alloc each plane separately
     for (int i = 0; i < planes; i++)
     {
-        pFrame->ppPlanes[i] = aligned_alloc(IMAGE_ROW_ALIGN, planeBytes);
+        pFrame->ppPlanes[i] = platformAlignedAlloc(IMAGE_ROW_ALIGN, planeBytes);
         if (!pFrame->ppPlanes[i])
         {
             pFrame->numPlanes = i;
@@ -90,7 +91,7 @@ void imageFrameFreePlanes(struct Frame *pFrame)
     {
         for (int i = 0; i < pFrame->numPlanes; i++)
         {
-            free(pFrame->ppPlanes[i]);
+            platformAlignedFree(pFrame->ppPlanes[i]);
         }
     }
     free((void *)pFrame->ppPlanes);

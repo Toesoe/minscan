@@ -7,13 +7,11 @@
  *
  * @copyright Copyright (c) 2026
  *
- * @note uses clock_gettime(CLOCK_MONOTONIC) and
- *       clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME). Linux and other
- *       POSIX systems provide both; macOS needs a different sleep backend.
+ * @note uses clock_gettime(CLOCK_MONOTONIC) and a relative nanosleep loop, suitable for linux + macos
  */
 
 #include "src/core/error.h"
-#include "time.h"
+#include "src/platform/time.h"
 
 #include <errno.h>
 #include <time.h>
@@ -22,7 +20,7 @@ int timeDeadlineAfter(unsigned ms, struct TimeDeadline *pOutDeadline)
 {
     struct timespec now;
 
-    if (pOutDeadline == nullptr)
+    if (pOutDeadline == NULL)
     {
         return MS_ERR_RANGE;
     }
@@ -50,50 +48,62 @@ int timeDeadlineAfter(unsigned ms, struct TimeDeadline *pOutDeadline)
 
 int timeSleepUntil(const struct TimeDeadline *pDeadline)
 {
-    struct timespec deadline;
-    int             rc;
-
-    if (pDeadline == nullptr || pDeadline->time_nanosec >= 1000000000u)
+    if (pDeadline == NULL || pDeadline->time_nanosec >= 1000000000u)
     {
         return MS_ERR_RANGE;
     }
 
-    deadline.tv_sec  = (time_t)pDeadline->time_sec;
-    deadline.tv_nsec = (long)pDeadline->time_nanosec;
+    for (;;)
+    {
+        struct timespec now;
 
-    do
-    {
-        rc = clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &deadline, nullptr);
-    } while (rc == EINTR);
+        if (clock_gettime(CLOCK_MONOTONIC, &now) != 0 || now.tv_sec < 0)
+        {
+            return MS_ERR_IO;
+        }
 
-    if (rc == 0)
-    {
-        return MS_OK;
+        const uint64_t nowSec  = (uint64_t)now.tv_sec;
+        const uint64_t nowNsec = (uint64_t)now.tv_nsec;
+
+        if ((nowSec > pDeadline->time_sec) || ((nowSec == pDeadline->time_sec) && (nowNsec >= pDeadline->time_nanosec)))
+        {
+            return MS_OK;
+        }
+
+        uint64_t sec  = pDeadline->time_sec - nowSec;
+        int64_t  nsec = (int64_t)pDeadline->time_nanosec - (int64_t)nowNsec;
+
+        if (nsec < 0)
+        {
+            sec -= 1;
+            nsec += 1000000000;
+        }
+
+        const struct timespec req = {.tv_sec = (time_t)sec, .tv_nsec = (long)nsec};
+
+        if ((nanosleep(&req, NULL) != 0) && (errno != EINTR))
+        {
+            return MS_ERR_IO;
+        }
     }
-    if (rc == EINVAL)
-    {
-        return MS_ERR_RANGE;
-    }
-    return MS_ERR_IO;
 }
 
 bool timeIsDeadlineExpired(const struct TimeDeadline *pDeadline)
 {
     struct timespec now;
-    uint64_t        sec;
-    uint64_t        nsec;
 
-    if (pDeadline == nullptr)
+    if (pDeadline == NULL)
     {
         return true;
     }
     if (clock_gettime(CLOCK_MONOTONIC, &now) != 0 || now.tv_sec < 0)
     {
-        // A broken clock should not make a caller spin forever
+        // broken clock? anyway don't hang here
         return true;
     }
 
-    sec  = (uint64_t)now.tv_sec;
-    nsec = (uint64_t)now.tv_nsec;
-    return sec > pDeadline->time_sec || (sec == pDeadline->time_sec && nsec >= pDeadline->time_nanosec);
+    const uint64_t sec  = (uint64_t)now.tv_sec;
+    const uint64_t nsec = (uint64_t)now.tv_nsec;
+
+    return (sec > pDeadline->time_sec) || ((sec == pDeadline->time_sec) && (nsec >= pDeadline->time_nanosec));
 }

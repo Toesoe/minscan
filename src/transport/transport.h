@@ -33,8 +33,7 @@ enum TransportDirection
 struct TransportResult
 {
     uint8_t  status;                     ///< SCSI status byte: 0x00 GOOD, 0x02 CHECK CONDITION, ...
-    uint16_t hostStatus;                 ///< backend host status
-    uint16_t driverStatus;               ///< backend driver status
+    uint32_t backendStatus;              ///< backend detail for logs: Linux DID<<16|driver, Win32 GetLastError
     int32_t  resid;                      ///< residual bytes: requested minus transferred; 0 on a full transfer
     uint8_t  sense[TRANSPORT_SENSE_MAX]; ///< sense data; only meaningful on CHECK CONDITION
     size_t   senseLen;                   ///< valid bytes in @ref sense

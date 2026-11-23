@@ -60,8 +60,7 @@ int cmd_probe(int argc, char **argv, arg_dstr_t res, void *ctx)
         rc = transportExec(&transport, cdb, lenCdb, TRANSPORT_DIR_NONE, nullptr, 0, 10000, &result);
         if (rc == MS_OK)
         {
-            printf("probe: TUR status=%02x host=%04x driver=%04x resid=%d\n", result.status, result.hostStatus,
-                   result.driverStatus, result.resid);
+            printf("probe: TUR status=%02x backend=%08x resid=%d\n", result.status, result.backendStatus, result.resid);
             if (result.status != PROTO_SCSI_GOOD)
             {
                 rc = MS_ERR_PROTO;
@@ -80,8 +79,7 @@ int cmd_probe(int argc, char **argv, arg_dstr_t res, void *ctx)
 
         if (parkRc == MS_OK)
         {
-            printf("probe: park status=%02x host=%04x driver=%04x\n", result.status, result.hostStatus,
-                   result.driverStatus);
+            printf("probe: park status=%02x backend=%08x\n", result.status, result.backendStatus);
         }
         else
         {

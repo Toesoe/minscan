@@ -10,13 +10,15 @@ project('minscan', 'c',
   ])
 
 cc = meson.get_compiler('c')
-add_project_arguments(
-  '-D_POSIX_C_SOURCE=200809L',
+project_args = [
   '-Werror',  # scoped to our targets; built-in werror=true would hit subprojects too
   '-Wshadow',
   '-Wconversion',
-  language: 'c',
-)
+]
+if host_machine.system() != 'windows'
+  project_args += '-D_POSIX_C_SOURCE=200809L'
+endif
+add_project_arguments(project_args, language: 'c')
 
 inc = include_directories('include')
 
@@ -55,7 +57,9 @@ core_common_src = files(
 core_src = core_common_src + files('src/core/image/tiff.c')
 
 platform_src = files('src/platform/time.c')
-if host_machine.system() == 'linux'
+if host_machine.system() == 'windows'
+  platform_src += files('src/platform/time_win32.c')
+elif cc.has_function('clock_gettime', prefix: '#define _POSIX_C_SOURCE 200809L\n#include <time.h>')
   platform_src += files('src/platform/time_posix.c')
 else
   platform_src += files('src/platform/time_unsupported.c')
@@ -69,7 +73,9 @@ if get_option('build_cli') or get_option('build_tests')
 endif
 
 transport_src = files('src/transport/transport.c')
-if host_machine.system() == 'linux'
+if host_machine.system() == 'windows'
+  transport_src += files('src/transport/win32_spti.c')
+elif host_machine.system() == 'linux'
   transport_src += files('src/transport/linux_sg.c')
 else
   transport_src += files('src/transport/unsupported.c')

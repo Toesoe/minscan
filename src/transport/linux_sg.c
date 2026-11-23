@@ -98,11 +98,10 @@ static int linuxSGTransportExec(const struct Transport *pTransport, const uint8_
         return MS_ERR_IO;
     }
 
-    pRes->status       = h.status;
-    pRes->hostStatus   = h.host_status;
-    pRes->driverStatus = h.driver_status;
-    pRes->resid        = h.resid;
-    pRes->senseLen     = h.sb_len_wr;
+    pRes->status        = h.status;
+    pRes->backendStatus = ((uint32_t)h.host_status << 16) | h.driver_status;
+    pRes->resid         = h.resid;
+    pRes->senseLen      = h.sb_len_wr;
 
     if (h.host_status == DID_TIME_OUT)
     {

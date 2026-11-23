@@ -100,7 +100,7 @@ int exposureFromSat(const struct Sat *pSat, enum FilmType film, bool glassHolder
     }
 
     // manual EV compensation is 2^EV on RGB
-    if (!iszero(ev))
+    if (ev != 0.0)
     {
         double evScale = pow(2, ev);
 
