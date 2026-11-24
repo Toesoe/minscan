@@ -517,7 +517,9 @@ int ms_eject(MsSession *session, char *err, size_t errlen)
     if ((err != nullptr) && (errlen > 0)) err[0] = '\0';
     if (session == nullptr) return MS_ERR_RANGE;
 
-    const int rc = sessionEject(&session->session);
+    // eject needs no carrier configuration: bind the transport directly so a
+    // fresh session can eject what an earlier run left in the scanner
+    const int rc = sessionEjectTransport(&session->transport);
 
     if (rc != MS_OK)
     {

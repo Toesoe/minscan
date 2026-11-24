@@ -102,3 +102,26 @@ def test_loaded_carrier_fields_bind() -> None:
     carrier.glassless = 0
     carrier.ev = 0.0
     assert (carrier.type, carrier.film) == (1, 2)
+
+
+def test_eject_invalidates_the_carrier_configuration() -> None:
+    cffi = pytest.importorskip("cffi")
+    ffi = cffi.FFI()
+    session = object.__new__(_api.Session)
+    session._closed = False
+    session._ffi = ffi
+    session._session = ffi.NULL
+    session.device = "/dev/sg9"
+    session._config = (int(Media.FORMAT_120), int(Film.MONO), 0, False, 0.0)
+    session._media = Media.FORMAT_120
+
+    class _Lib:
+        @staticmethod
+        def ms_eject(*_args: object) -> int:
+            return 0
+
+    session._lib = _Lib()
+
+    assert session.eject() is True
+    assert session._config is None
+    assert session._media is None

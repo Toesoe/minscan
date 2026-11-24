@@ -295,9 +295,9 @@ int sessionPark(struct Session *pSession)
     return transportExec(pSession->pTransport, cdb, n, TRANSPORT_DIR_NONE, nullptr, 0, PARK_TIMEOUT_MS, &res);
 }
 
-int sessionEject(struct Session *pSession)
+int sessionEjectTransport(const struct Transport *pTransport)
 {
-    if (pSession == nullptr || pSession->pTransport == nullptr)
+    if (pTransport == nullptr)
     {
         return MS_ERR_RANGE;
     }
@@ -306,7 +306,7 @@ int sessionEject(struct Session *pSession)
     struct TransportResult res = {0};
     size_t                 n   = protoCDBVendor31(PROTO_V31_EJECT, cdb);
 
-    int rc = transportExec(pSession->pTransport, cdb, n, TRANSPORT_DIR_NONE, nullptr, 0, EJECT_TIMEOUT_MS, &res);
+    int rc = transportExec(pTransport, cdb, n, TRANSPORT_DIR_NONE, nullptr, 0, EJECT_TIMEOUT_MS, &res);
 
     if (rc != MS_OK)
     {
@@ -319,4 +319,13 @@ int sessionEject(struct Session *pSession)
     }
 
     return MS_OK;
+}
+
+int sessionEject(struct Session *pSession)
+{
+    if (pSession == nullptr)
+    {
+        return MS_ERR_RANGE;
+    }
+    return sessionEjectTransport(pSession->pTransport);
 }

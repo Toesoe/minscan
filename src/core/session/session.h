@@ -263,7 +263,18 @@ int sessionMeasureFocus(struct Session *pSession, int16_t focus, double *pOutSco
 int sessionPark(struct Session *pSession);
 
 /**
- * @brief send the vendor eject command (31 00)
+ * @brief send the vendor eject command (31 00) over an open transport
+ *
+ * @param pTransport open transport; no session or carrier configuration is needed
+ * @return int status code
+ *
+ * @note eject is valid before @ref sessionInit: the CLI and ``ms_eject`` use this
+ *       form so a carrier can be ejected without configuring one first
+ */
+int sessionEjectTransport(const struct Transport *pTransport);
+
+/**
+ * @brief send the vendor eject command (31 00) on a configured session
  *
  * @param pSession pointer to active session
  * @return int status code

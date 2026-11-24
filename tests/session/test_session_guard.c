@@ -32,6 +32,8 @@ struct MockState
 
     int readCount;
     int turCount;
+
+    uint8_t vendor31Sub;
 };
 
 static void putU16BE(uint8_t *pDst, uint16_t value)
@@ -162,6 +164,7 @@ static int mockExec(const struct Transport *pTransport, const uint8_t *pCdb, siz
         }
         case PROTO_OP_VENDOR31:
         {
+            pState->vendor31Sub = pCdb[1];
             return MS_OK;
         }
         default:
@@ -207,6 +210,14 @@ int main(void)
     CHECK(session.dpi == 3200);
     CHECK(session.focus == 45);
     CHECK(sessionEject(&session) == MS_OK);
+    CHECK(state.vendor31Sub == PROTO_V31_EJECT);
+
+    // --- eject is transport-level: no sessionInit/configure needed ---
+    struct Session bare = {0};
+
+    bare.pTransport = &transport;
+    CHECK(sessionEject(&bare) == MS_OK);
+    CHECK(state.vendor31Sub == PROTO_V31_EJECT);
 
     resetMock(&state, PROTO_MEDIA_CODE_35MM, 1, 4800);
     bindMock(&transport, &state);

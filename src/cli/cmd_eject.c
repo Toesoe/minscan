@@ -36,11 +36,7 @@ int cmd_eject(int argc, char **argv, arg_dstr_t res, void *ctx)
 
     printf("eject: device %s\n", transportPath(&transport));
 
-    struct Session session = {0};
-
-    session.pTransport = &transport;
-
-    rc = sessionEject(&session);
+    rc = sessionEjectTransport(&transport);
 
     transportClose(&transport);
     arg_freetable(argtable, sizeof argtable / sizeof argtable[0]);

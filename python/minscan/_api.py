@@ -417,6 +417,9 @@ class Session:
         err = self._ffi.new("char[512]")
         rc = int(self._lib.ms_eject(self._session, err, len(err)))
         _raise(self._ffi, err, rc)
+        # the carrier is gone; the next scan must configure (and probe) again
+        self._config = None
+        self._media = None
         return True
 
     def close(self) -> None:

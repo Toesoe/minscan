@@ -4,7 +4,7 @@ build-backend = "mesonpy"
 
 [project]
 name = "minscan"
-version = "0.1.1"
+version = "0.1.2"
 description = "Python bindings for the Minolta DiMAGE minscan C library"
 readme = "README.md"
 requires-python = ">=3.13"
