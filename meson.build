@@ -1,5 +1,5 @@
 project('minscan', 'c',
-  version: '0.1.0',
+  version: '0.1.1',
   meson_version: '>=1.2',
   default_options: [
     'c_std=c2x',
@@ -19,6 +19,11 @@ if host_machine.system() != 'windows'
   project_args += '-D_POSIX_C_SOURCE=200809L'
 endif
 add_project_arguments(project_args, language: 'c')
+
+if host_machine.system() == 'windows'
+  # keep libminscan.dll self-contained; no libgcc_s_seh-1.dll beside the wheel
+  add_project_link_arguments('-static-libgcc', language: 'c')
+endif
 
 inc = include_directories('include')
 

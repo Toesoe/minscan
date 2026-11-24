@@ -30,6 +30,45 @@ jobs:
           name: wheels
           path: wheelhouse/*.whl
 
+  build_wheels_windows:
+    name: Build Windows wheels
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install cibuildwheel
+        run: python -m pip install --upgrade pip cibuildwheel==4.3.5
+
+      - name: Build wheels
+        shell: cmd
+        env:
+          CIBW_BUILD: "cp313-win_amd64 cp314-win_amd64"
+          CIBW_BUILD_VERBOSITY: "1"
+          # the wheel only contains system DLLs; no delvewheel repair needed
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: ""
+        run: |
+          rem meson-python picks the compiler from CC/AR; no native file needed
+          set "PATH=C:\msys64\mingw64\bin;%PATH%"
+          set "CC=x86_64-w64-mingw32-gcc"
+          set "AR=x86_64-w64-mingw32-ar"
+          "%pythonLocation%\python.exe" -m cibuildwheel --output-dir wheelhouse
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-windows
+          path: wheelhouse/*.whl
+
   build_sdist:
     name: Build sdist
     runs-on: ubuntu-24.04
@@ -52,7 +91,7 @@ jobs:
 
   publish:
     name: Publish to PyPI
-    needs: [build_wheels, build_sdist]
+    needs: [build_wheels, build_wheels_windows, build_sdist]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
     environment:

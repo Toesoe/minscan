@@ -170,7 +170,7 @@ def _library_candidates() -> list[str]:
     add(os.environ.get("MINSCAN_LIB"))
 
     here = Path(__file__).resolve().parent
-    for name in ("libminscan.so", "libminscan.dylib", "minscan.dll"):
+    for name in ("libminscan.so", "libminscan.dylib", "minscan.dll", "libminscan.dll"):
         add(str(here / name))
 
     libdir = _pkg_config_libdir()
@@ -190,8 +190,10 @@ def _library_candidates() -> list[str]:
     root = here.parents[1] if len(here.parents) >= 2 else here
     add(str(root / "builddir" / "libminscan.so"))
     add(str(root / "builddir" / "libminscan.dylib"))
+    add(str(root / "builddir" / "libminscan.dll"))
     add("libminscan.so")
     add("libminscan.dylib")
+    add("libminscan.dll")
     return candidates
 
 
