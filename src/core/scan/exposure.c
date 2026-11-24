@@ -56,7 +56,8 @@ int exposureFromSat(const struct Sat *pSat, enum FilmType film, bool glassHolder
         return MS_ERR_RANGE;
     }
 
-    if (!isfinite(ev) || (ev < -EV_LIMIT_STOPS) || (ev > EV_LIMIT_STOPS))
+    // float cast for mingw builds
+    if (!isfinite((float)ev) || (ev < -EV_LIMIT_STOPS) || (ev > EV_LIMIT_STOPS))
     {
         return MS_ERR_RANGE;
     }

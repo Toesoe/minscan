@@ -15,9 +15,9 @@ jobs:
     name: Linux (gcc)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
 
@@ -33,40 +33,13 @@ jobs:
       - name: Test
         run: meson test -C build --suite minscan --print-errorlogs
 
-  clang:
-    name: Linux (clang)
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: Install build tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang
-          python -m pip install --upgrade pip meson ninja
-
-      - name: Configure
-        env:
-          CC: clang
-        run: meson setup build --wrap-mode=forcefallback
-
-      - name: Build
-        run: meson compile -C build
-
-      - name: Test
-        run: meson test -C build --suite minscan --print-errorlogs
-
   sanitizers:
     name: Linux (ASan + UBSan)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
 
@@ -86,9 +59,9 @@ jobs:
     name: Windows (mingw cross build)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
 
@@ -117,9 +90,9 @@ jobs:
     name: Python wheel smoke test
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
 

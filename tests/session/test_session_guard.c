@@ -417,7 +417,7 @@ int main(void)
 
     // --- persistent calibration cache: page 0x28 is the authority ---
     (void)setenv("XDG_CACHE_HOME", "/tmp/minscan-cache-test", 1);
-    (void)system("rm -rf /tmp/minscan-cache-test; mkdir -p /tmp/minscan-cache-test");
+    int ret = system("rm -rf /tmp/minscan-cache-test; mkdir -p /tmp/minscan-cache-test");
 
     struct LoadedCarrier cacheCarrier = {.type = SCAN_CARRIER_35MM, .film = SCAN_FILM_MONO};
 
@@ -459,7 +459,7 @@ int main(void)
     CHECK(dirty.isCalibrated);
     CHECK(state.selectCount == 3);
 
-    (void)system("rm -rf /tmp/minscan-cache-test");
+    ret = system("rm -rf /tmp/minscan-cache-test");
 
-    return 0;
+    return ret;
 }
