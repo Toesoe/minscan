@@ -21,7 +21,7 @@ _CDEF = """
 typedef struct MsSession MsSession;
 
 typedef struct MsLoadedCarrier {
-    int media;
+    int type;        /* MsCarrier */
     int film;
     int format_code;
     int glassless;

@@ -1,9 +1,12 @@
-"""Package-level checks that do not need a scanner or the shared library."""
+"""Package-level checks that do not need a scanner."""
 
 from __future__ import annotations
 
-from minscan import Film, Media, Phase
-from minscan import _api
+import re
+from pathlib import Path
+
+import pytest
+from minscan import Film, Media, Phase, _api
 
 
 def test_enums_match_the_c_api() -> None:
@@ -59,3 +62,43 @@ def test_devices_does_not_probe_by_default(monkeypatch) -> None:
     assert _api.devices(probe_media=True) == [
         ("/dev/sg9", _api.Media.FORMAT_120)]
     assert called is True
+
+
+def _struct_fields(text: str, name: str) -> list[str]:
+    """Field names of ``typedef struct NAME { ... } NAME;``, in declaration order."""
+    block = re.search(
+        rf"typedef\s+struct\s+{name}\s*\{{(.*?)\}}\s*{name}\s*;", text, re.DOTALL
+    )
+    assert block is not None, f"struct {name} not found"
+    fields = []
+    for line in block.group(1).splitlines():
+        line = line.strip()
+        if not line or line.startswith(("/*", "//", "*")):
+            continue
+        fields.append(line.split()[1].rstrip(";"))
+    return fields
+
+
+def test_cdef_structs_match_the_c_header() -> None:
+    """The hand-written cdef must follow include/minscan/capi.h field for field."""
+    header = Path(__file__).parents[2] / "include" / "minscan" / "capi.h"
+    if not header.exists():
+        pytest.skip("source header not available in an installed package")
+    text = header.read_text()
+    for name in ("MsLoadedCarrier", "MsRequest"):
+        assert _struct_fields(_api._CDEF, name) == _struct_fields(text, name)
+
+
+def test_loaded_carrier_fields_bind() -> None:
+    """Every field configure() writes must exist in the cdef."""
+    try:
+        ffi, _ = _api.load()
+    except _api.MinscanUnavailable:
+        pytest.skip("libminscan is not available")
+    carrier = ffi.new("MsLoadedCarrier *")
+    carrier.type = int(Media.FORMAT_120)
+    carrier.film = int(Film.MONO)
+    carrier.format_code = 0
+    carrier.glassless = 0
+    carrier.ev = 0.0
+    assert (carrier.type, carrier.film) == (1, 2)

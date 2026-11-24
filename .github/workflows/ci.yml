@@ -106,3 +106,8 @@ jobs:
           python -m venv /tmp/wheel-venv
           /tmp/wheel-venv/bin/pip install dist/*.whl
           /tmp/wheel-venv/bin/python -c "import minscan; print(minscan.__version__)"
+
+      - name: Binding tests
+        run: |
+          /tmp/wheel-venv/bin/pip install pytest
+          /tmp/wheel-venv/bin/python -m pytest python/tests -q

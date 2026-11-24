@@ -61,7 +61,7 @@ jobs:
           rem meson-python picks the compiler from CC/AR; no native file needed
           set "PATH=C:\msys64\mingw64\bin;%PATH%"
           set "CC=x86_64-w64-mingw32-gcc"
-          set "AR=x86_64-w64-mingw32-ar"
+          set "AR=ar"
           "%pythonLocation%\python.exe" -m cibuildwheel --output-dir wheelhouse
 
       - uses: actions/upload-artifact@v4
