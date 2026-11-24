@@ -127,7 +127,7 @@ static int carrierToInternal(const MsLoadedCarrier *pIn, struct LoadedCarrier *p
 {
     if ((pIn == nullptr) || (pOut == nullptr)) return MS_ERR_RANGE;
     if ((pIn->type != MS_API_MEDIA_35MM) && (pIn->type != MS_API_MEDIA_120)) return MS_ERR_RANGE;
-    if ((pIn->film < MS_API_FILM_COLOUR_NEG) || (pIn->film > MS_API_FILM_MONO)) return MS_ERR_RANGE;
+    if ((pIn->film < MS_API_FILM_COLOR_NEG) || (pIn->film > MS_API_FILM_MONO)) return MS_ERR_RANGE;
 
     memset(pOut, 0, sizeof *pOut);
     pOut->type       = (pIn->type == MS_API_MEDIA_35MM) ? SCAN_CARRIER_35MM : SCAN_CARRIER_120;

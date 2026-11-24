@@ -6,7 +6,7 @@ the sibling ``builddir/libminscan.so`` or a system install instead.
     import minscan
 
     with minscan.Session() as dev:  # or Session("/dev/sg1")
-        dev.configure(minscan.Media.FORMAT_120, minscan.Film.COLOUR_NEG, format_code=0x20)
+        dev.configure(minscan.Media.FORMAT_120, minscan.Film.COLOR_NEG, format_code=0x20)
         frame = dev.scan(dpi=3200, autofocus=True, capture_ir=True)
         print(frame.rgb.shape, frame.ir.shape)
 """

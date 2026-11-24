@@ -27,9 +27,9 @@ enum MsCarrier
 
 enum MsFilm
 {
-    MS_API_FILM_COLOUR_NEG = 0,
-    MS_API_FILM_COLOUR_POS = 1,
-    MS_API_FILM_MONO       = 2,
+    MS_API_FILM_COLOR_NEG = 0,
+    MS_API_FILM_COLOR_POS = 1,
+    MS_API_FILM_MONO      = 2,
 };
 
 enum MsPhase

@@ -8,7 +8,8 @@ from minscan import _api
 
 def test_enums_match_the_c_api() -> None:
     assert (int(Media.FORMAT_35MM), int(Media.FORMAT_120)) == (0, 1)
-    assert (int(Film.COLOUR_NEG), int(Film.COLOUR_POS), int(Film.MONO)) == (0, 1, 2)
+    assert (int(Film.COLOR_NEG), int(Film.COLOR_POS),
+            int(Film.MONO)) == (0, 1, 2)
     assert Phase.CALIBRATE.label == "Calibrating"
     assert Phase.SCAN.label == "Scanning"
 
@@ -17,7 +18,8 @@ def test_candidates_prefer_env_then_the_bundled_library(monkeypatch, tmp_path) -
     monkeypatch.setenv("MINSCAN_LIB", "/custom/libminscan.so")
     monkeypatch.setattr(_api, "_pkg_config_libdir", lambda: None)
     monkeypatch.setattr(_api.ctypes.util, "find_library", lambda _name: None)
-    monkeypatch.setattr(_api, "__file__", str(tmp_path / "minscan" / "_api.py"))
+    monkeypatch.setattr(_api, "__file__", str(
+        tmp_path / "minscan" / "_api.py"))
 
     candidates = _api._library_candidates()
 
@@ -54,5 +56,6 @@ def test_devices_does_not_probe_by_default(monkeypatch) -> None:
 
     assert _api.devices() == [("/dev/sg9", None)]
     assert called is False
-    assert _api.devices(probe_media=True) == [("/dev/sg9", _api.Media.FORMAT_120)]
+    assert _api.devices(probe_media=True) == [
+        ("/dev/sg9", _api.Media.FORMAT_120)]
     assert called is True

@@ -101,8 +101,8 @@ class Media(IntEnum):
 class Film(IntEnum):
     """Film identity, matching ``enum MsFilm`` in capi.h."""
 
-    COLOUR_NEG = 0
-    COLOUR_POS = 1
+    COLOR_NEG = 0
+    COLOR_POS = 1
     MONO = 2
 
 

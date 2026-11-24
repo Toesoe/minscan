@@ -22,7 +22,7 @@
 #define GLASS_HOLDER_B   (1.119681)
 #define GLASS_HOLDER_IR  (1.209236)
 
-// colour-neg gains compensate the orange mask (R/G/B)
+// color-neg gains compensate the orange mask (R/G/B)
 #define COLOR_NEG_GAIN_R (1.5384615384615383)
 #define COLOR_NEG_GAIN_G (10.0 / 3.0)
 #define COLOR_NEG_GAIN_B (5.0)

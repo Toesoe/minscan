@@ -61,7 +61,7 @@ enum ProtoSelector
 #define PROTO_WORD_INIT_BANK1   0x0001 ///< 28/83/0001 factory table bank 1
 
 #define PROTO_WORD_DATA_BASE    0x8a00 ///< image read: base high byte
-#define PROTO_WORD_DATA_COLOR   0x0500 ///< image read: colour bit
+#define PROTO_WORD_DATA_COLOR   0x0500 ///< image read: color bit
 #define PROTO_WORD_DATA_SCAN    0x7000 ///< image read: full-scan bit
 #define PROTO_WORD_TERM_MASK    0xff00 ///< clear the low byte for the terminator
 

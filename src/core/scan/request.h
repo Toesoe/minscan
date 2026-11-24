@@ -24,8 +24,8 @@ enum Carrier
 /** @brief host-side film identity */
 enum FilmType
 {
-    SCAN_FILM_COLOR_NEG = 0, ///< colour negative (orange-mask gain)
-    SCAN_FILM_COLOR_POS = 1, ///< colour positive/slide (10/7 gain)
+    SCAN_FILM_COLOR_NEG = 0, ///< color negative (orange-mask gain)
+    SCAN_FILM_COLOR_POS = 1, ///< color positive/slide (10/7 gain)
     SCAN_FILM_MONO      = 2, ///< black & white (single setpoint)
 };
 

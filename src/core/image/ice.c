@@ -3,7 +3,7 @@
 // the scanner gives us R/G/B plus an IR plane. dust, scratches, fingerprints
 // and most surface junk scatter or block IR much more than they affect the dye
 // image. ICE therefore uses IR to decide *where* to repair, and R/G/B to supply
-// the replacement colour.
+// the replacement color.
 //
 // pipeline:
 //   density   convert linear 16-bit samples to log density. ratios become
@@ -23,7 +23,7 @@
 // extend that to ±5, so the full frame is never duplicated.
 //
 // the profile constants are Minolta's; see g_iceProfiles. samples are used as
-// delivered: no inversion or colour management
+// delivered: no inversion or color management
 #include "image.h"
 #include "src/core/error.h"
 #include "src/core/log.h"
@@ -640,7 +640,7 @@ static void iceColDark(const struct IceRing *pRing, int y, int rows, int cols)
 // ------------------------------------------------------------------
 // four resolutions around one pixel:
 //   0 = 9x9 octagon, 1 = 5x5 octagon, 2 = 3x3 tent, 3 = the raw pixel
-// c = sum of weights, p = weighted gate mean, l = weighted colour density mean.
+// c = sum of weights, p = weighted gate mean, l = weighted color density mean.
 // subtracting one level from the next gives the detail at that scale
 struct IceLevels
 {
@@ -829,8 +829,8 @@ static float iceDither(float x, size_t pixel, size_t channel, const struct IcePa
 //   lo/hi  = gate slope at each level. crossBeta widens that range with the
 //            four neighbours, so a real edge is not mistaken for noise
 //   per channel:
-//     base = blurred colour + gamma * (irRef - center.p[0])
-//            a local IR dip means a defect, so lift the blurred colour
+//     base = blurred color + gamma * (irRef - center.p[0])
+//            a local IR dip means a defect, so lift the blurred color
 //     per level:
 //       detail = L_l - L_{l-1} (the detail at that scale)
 //       soft-threshold it using a[ch][band]: small detail -> 0, large -> kept
@@ -886,7 +886,7 @@ static size_t iceRebuildRow(const struct IceRing *pRing, struct Frame *pFrame, i
         float hi[4] = {0};
 
         // gate slope at each scale: the detail the IR itself sees. this sets the
-        // expected colour-detail scale, which the soft threshold below uses
+        // expected color-detail scale, which the soft threshold below uses
         for (int level = 1; level <= 3; level++)
         {
             lo[level] = center.p[level] - center.p[level - 1];
@@ -929,7 +929,7 @@ static size_t iceRebuildRow(const struct IceRing *pRing, struct Frame *pFrame, i
 
         for (int ch = 0; ch < 3; ch++)
         {
-            // start from the 9x9 colour, then add what the IR says the blur
+            // start from the 9x9 color, then add what the IR says the blur
             // lost: irRef - center.p[0] is how far this patch sits below clear film
             float a = center.l[ch][0] + p->gamma[ch] * (p->irRef - center.p[0]);
 

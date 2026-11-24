@@ -20,7 +20,7 @@
 #define DESC_TABLE_TAG  0x80
 #define DESC_FLAGS_TAG  0x10
 
-#define DESC_MODE_COLOR (0xffu) ///< +0x21 colour, arming or focus block
+#define DESC_MODE_COLOR (0xffu) ///< +0x21 color, arming or focus block
 #define DESC_MODE_MONO  (0xfau) ///< +0x21 mono scan/prescan
 
 #define DESC_LEN        (100) ///< total descriptor size on the wire

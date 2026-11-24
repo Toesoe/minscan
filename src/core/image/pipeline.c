@@ -44,7 +44,7 @@ int imagePostprocess(struct Frame *pFrame, const struct ImagePostParams *pParams
         }
 
         // the IR plane is self-normalised for every 4-plane frame: its column
-        // profile is illumination, and ICE turns residual banding into colour
+        // profile is illumination, and ICE turns residual banding into color
         // artefacts. runs on the linear path too; the RGB planes stay raw
         rc = imageNormalizeIR(pFrame);
         if (rc != MS_OK)
