@@ -1,10 +1,14 @@
 #include "src/core/error.h"
 #include "src/core/image/image.h"
+#include "src/core/session/calibration_cache.h"
 #include "src/core/session/session.h"
 #include "src/core/wire/descriptor.h"
+#include "src/core/wire/pages.h"
 #include "src/core/wire/scsi.h"
 #include "test.h"
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 // mock transport: enough MODE SENSE/READ/SELECT to exercise the session value
@@ -410,6 +414,52 @@ int main(void)
     state.media = PROTO_MEDIA_CODE_35MM;
     CHECK(sessionCheckCarrier(&session) == MS_OK);
     CHECK(!session.isCalibrated); // stays invalid until calibrated
+
+    // --- persistent calibration cache: page 0x28 is the authority ---
+    (void)setenv("XDG_CACHE_HOME", "/tmp/minscan-cache-test", 1);
+    (void)system("rm -rf /tmp/minscan-cache-test; mkdir -p /tmp/minscan-cache-test");
+
+    struct LoadedCarrier cacheCarrier = {.type = SCAN_CARRIER_35MM, .film = SCAN_FILM_MONO};
+
+    sessionCalibrationCacheStore("/dev/test-sg", SCAN_CARRIER_35MM);
+
+    resetMock(&state, PROTO_MEDIA_CODE_35MM, 1, 4800);
+    state.status = PROTO_PAGE28_STATUS_CLEAN;
+    bindMock(&transport, &state);
+    snprintf(transport.path, sizeof transport.path, "/dev/test-sg");
+
+    struct Session cached = {0};
+    cached.pTransport     = &transport;
+    cached.carrier        = cacheCarrier;
+    CHECK(sessionEnsureCalibrated(&cached) == MS_OK);
+    CHECK(cached.isCalibrated);
+    CHECK(state.selectCount == 0);
+
+    resetMock(&state, PROTO_MEDIA_CODE_35MM, 1, 4800);
+    state.status = PROTO_PAGE28_STATUS_FRESH;
+    bindMock(&transport, &state);
+    snprintf(transport.path, sizeof transport.path, "/dev/test-sg");
+
+    struct Session fresh = {0};
+    fresh.pTransport     = &transport;
+    fresh.carrier        = cacheCarrier;
+    CHECK(sessionEnsureCalibrated(&fresh) == MS_OK);
+    CHECK(fresh.isCalibrated);
+    CHECK(state.selectCount == 0);
+
+    resetMock(&state, PROTO_MEDIA_CODE_35MM, 1, 4800);
+    state.status = PROTO_PAGE28_STATUS_DIRTY;
+    bindMock(&transport, &state);
+    snprintf(transport.path, sizeof transport.path, "/dev/test-sg");
+
+    struct Session dirty = {0};
+    dirty.pTransport     = &transport;
+    dirty.carrier        = cacheCarrier;
+    CHECK(sessionEnsureCalibrated(&dirty) == MS_OK);
+    CHECK(dirty.isCalibrated);
+    CHECK(state.selectCount == 3);
+
+    (void)system("rm -rf /tmp/minscan-cache-test");
 
     return 0;
 }

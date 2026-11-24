@@ -48,6 +48,7 @@ core_common_src = files(
     'src/core/scan/job.c',
     'src/core/session/acquire.c',
     'src/core/session/calibrate.c',
+    'src/core/session/calibration_cache.c',
     'src/core/session/exposure.c',
     'src/core/session/focus.c',
     'src/core/session/io.c',

@@ -195,6 +195,17 @@ int sessionCheckCarrier(struct Session *pSession);
 int sessionCalibrate(struct Session *pSession);
 
 /**
+ * @brief reuse a persistent or device-reported calibration, otherwise run the ladder
+ *
+ * @param pSession pointer to active session
+ * @return int status code
+ *
+ * @note page 0x28 is the authority: 0x58 forces a calibration, 0x40 means fresh, and 0x00 allows the persistent
+ *       cache to skip the ladder. a cache miss falls back to @ref sessionCalibrate
+ */
+int sessionEnsureCalibrated(struct Session *pSession);
+
+/**
  * @brief read the 0x83 base table for the 4-plane/IR path, decimated to the scan divisor
  *
  * @param pSession pointer to active session

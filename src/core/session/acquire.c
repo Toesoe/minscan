@@ -389,15 +389,12 @@ int sessionAcquire(struct Session *pSession, const struct Acquisition *pAcquisit
         return acquireError("carrier check", rc);
     }
 
-    if (!pSession->isCalibrated)
-    {
-        rc = sessionCalibrate(pSession);
+    rc = sessionEnsureCalibrated(pSession);
 
-        if (rc != MS_OK)
-        {
-            sessionQuiesceUnlessTimeout(pSession, rc);
-            return acquireError("calibrate", rc);
-        }
+    if (rc != MS_OK)
+    {
+        sessionQuiesceUnlessTimeout(pSession, rc);
+        return acquireError("calibrate", rc);
     }
 
     if (sessionSatIsZero(sessionSatFor(pSession, pSession->carrier.type)))

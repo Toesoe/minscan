@@ -9,6 +9,7 @@
  *
  */
 
+#include "calibration_cache.h"
 #include "internal.h"
 #include "src/core/error.h"
 #include "src/core/image/image.h"
@@ -80,9 +81,60 @@ int sessionCalibrate(struct Session *pSession)
         pSession->isCalibrated    = true;
         pSession->calibratedMedia = pSession->carrier.type;
         pSession->carrierSwitched = false;
+        sessionCalibrationCacheStore(transportPath(pSession->pTransport), pSession->carrier.type);
     }
 
     return rc;
+}
+
+int sessionEnsureCalibrated(struct Session *pSession)
+{
+    if ((pSession == nullptr) || (pSession->pTransport == nullptr))
+    {
+        return MS_ERR_RANGE;
+    }
+
+    const char *szDevice = transportPath(pSession->pTransport);
+    uint8_t     buf[SESSION_PAGE28_READ_LEN];
+    uint16_t    status   = 0xffffu;
+    bool        statusOk = false;
+
+    if ((sessionModeSense(pSession, PROTO_PAGE_JOB, (uint8_t)SESSION_PAGE28_READ_LEN, buf, sizeof buf) == MS_OK) &&
+        (protoPage28Parse(buf, SESSION_PAGE28_READ_LEN, &pSession->page28) == MS_OK))
+    {
+        status   = pSession->page28.status;
+        statusOk = true;
+    }
+
+    if (statusOk && (status == PROTO_PAGE28_STATUS_FRESH))
+    {
+        pSession->isCalibrated    = true;
+        pSession->calibratedMedia = pSession->carrier.type;
+        pSession->carrierSwitched = false;
+        sessionCalibrationCacheStore(szDevice, pSession->carrier.type);
+        return MS_OK;
+    }
+
+    if (statusOk && (status == PROTO_PAGE28_STATUS_DIRTY))
+    {
+        pSession->isCalibrated = false;
+    }
+
+    if (pSession->isCalibrated && (!statusOk || (status != PROTO_PAGE28_STATUS_DIRTY)))
+    {
+        return MS_OK;
+    }
+
+    if (statusOk && (status == PROTO_PAGE28_STATUS_CLEAN) &&
+        sessionCalibrationCacheLookup(szDevice, pSession->carrier.type))
+    {
+        pSession->isCalibrated    = true;
+        pSession->calibratedMedia = pSession->carrier.type;
+        pSession->carrierSwitched = false;
+        return MS_OK;
+    }
+
+    return sessionCalibrate(pSession);
 }
 
 int sessionReadBase(struct Session *pSession, unsigned div, uint16_t **ppBase, int *pCols)

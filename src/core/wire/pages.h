@@ -42,6 +42,12 @@ int protoPage25Parse(const uint8_t *pIn, size_t len, struct ProtoPage25 *pOut);
 /** @brief build a MODE SELECT page 0x25 payload */
 size_t protoPage25Select(uint16_t maxDPI, int16_t focus, uint8_t out[11]);
 
+/** @brief page 0x28 status words observed on hardware */
+#define PROTO_PAGE28_STATUS_CLEAN 0x0000u ///< post-job / neutral
+#define PROTO_PAGE28_STATUS_FRESH 0x0040u ///< freshly calibrated, not yet used
+#define PROTO_PAGE28_STATUS_DIRTY 0x0058u ///< carrier changed / calibration needed
+#define PROTO_PAGE28_STATUS_BOOT  0x00a0u ///< booting
+
 /** @brief page 0x28: job state / status word */
 struct ProtoPage28
 {

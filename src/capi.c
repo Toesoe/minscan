@@ -403,14 +403,12 @@ int ms_scan(MsSession *session, const MsRequest *request, MsProgressFn progress,
         }
     }
 
-    if (!pS->isCalibrated)
+    rc = sessionEnsureCalibrated(pS);
+
+    if (rc != MS_OK)
     {
-        rc = sessionCalibrate(pS);
-        if (rc != MS_OK)
-        {
-            setError(err, errlen, "calibrate: %s", errToString(rc));
-            goto fail;
-        }
+        setError(err, errlen, "calibrate: %s", errToString(rc));
+        goto fail;
     }
     // autofocus may have run the ladder itself; remember either path
     if (pS->isCalibrated) calibrationStore(session->device, pS->carrier.type);

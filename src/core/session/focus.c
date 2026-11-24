@@ -325,14 +325,11 @@ int sessionAutofocus(struct Session *pSession, unsigned frame, int16_t *pOutFocu
         return rc;
     }
 
-    if (!pSession->isCalibrated)
-    {
-        rc = sessionCalibrate(pSession);
+    rc = sessionEnsureCalibrated(pSession);
 
-        if (rc != MS_OK)
-        {
-            return rc;
-        }
+    if (rc != MS_OK)
+    {
+        return rc;
     }
 
     if (sessionSatIsZero(sessionSatFor(pSession, pSession->carrier.type)))
