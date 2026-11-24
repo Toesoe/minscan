@@ -35,12 +35,7 @@ struct CliProgress
 struct CliFocusProgress
 {
     struct CliProgress progress;
-    int                coarseDone;
-    int                fineDone;
-    int                coarseTotal;
-    int                fineTotal;
-    int                lastCoarseStep;
-    int                lastFineStep;
+    int                lastFilled;
 };
 
 /** @brief initialize a progress renderer */
@@ -66,12 +61,15 @@ void cliProgressAbort(struct CliProgress *pProgress);
 void cliProgressBar(char *szOut, size_t outLen, int done, int total, int width);
 
 /** @brief initialize the coarse/fine focus bars */
-void cliFocusProgressBegin(struct CliFocusProgress *pProgress, int coarseTotal, int fineTotal);
+void cliFocusProgressBegin(struct CliFocusProgress *pProgress);
 
 /** @brief advance the coarse or fine bar for one measured position */
-void cliFocusProgressStep(struct CliFocusProgress *pProgress, const char *szTag, int16_t focus);
+void cliFocusProgressStep(struct CliFocusProgress *pProgress, int16_t focus, double metric);
 
-/** @brief finish the focus bars */
+/** @brief render the committed focus position with the best metric seen */
+void cliFocusProgressCommit(struct CliFocusProgress *pProgress, int16_t focus, double metric);
+
+/** @brief finish the focus bar */
 void cliFocusProgressEnd(struct CliFocusProgress *pProgress);
 
 #endif // CLI_PROGRESS_H_

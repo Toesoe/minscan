@@ -269,15 +269,18 @@ def probe(device: str | os.PathLike[str] | None = None) -> Media | None:
     return Media(value) if value in (int(Media.FORMAT_35MM), int(Media.FORMAT_120)) else None
 
 
-def devices() -> list[tuple[str, Media | None]]:
+def devices(*, probe_media: bool = False) -> list[tuple[str, Media | None]]:
     """Return the autodetected scanner, or an empty list when none is attached.
 
-    The media is None when the scanner is present but not ready to report a
-    carrier yet.
+    Detection only reads the platform device inventory; it does not open the
+    scanner. Pass ``probe_media=True`` to send a readiness poll and read the
+    loaded carrier, which should not be done while a scan session is open.
     """
     path = detect()
     if path is None:
         return []
+    if not probe_media:
+        return [(path, None)]
     try:
         media = probe(path)
     except MinscanError:

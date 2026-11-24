@@ -13,7 +13,9 @@
 
 #include "src/platform/time.h"
 
+#include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #if defined(_WIN32)
@@ -233,7 +235,55 @@ void cliProgressBar(char *szOut, size_t outLen, int done, int total, int width)
     szOut[width + 2] = '\0';
 }
 
-void cliFocusProgressBegin(struct CliFocusProgress *pProgress, int coarseTotal, int fineTotal)
+#define FOCUS_METRIC_MIN 1.0e3
+#define FOCUS_METRIC_MAX 1.0e6
+#define FOCUS_BAR_WIDTH  30
+
+static int focusFill(double metric)
+{
+    if (!(metric > FOCUS_METRIC_MIN))
+    {
+        return 0;
+    }
+    if (metric >= FOCUS_METRIC_MAX)
+    {
+        return FOCUS_BAR_WIDTH;
+    }
+
+    const double norm = (log10(metric) - log10(FOCUS_METRIC_MIN)) / (log10(FOCUS_METRIC_MAX) - log10(FOCUS_METRIC_MIN));
+
+    int filled = (int)((norm * FOCUS_BAR_WIDTH) + 0.5);
+
+    if (filled < 0)
+    {
+        filled = 0;
+    }
+    if (filled > FOCUS_BAR_WIDTH)
+    {
+        filled = FOCUS_BAR_WIDTH;
+    }
+    return filled;
+}
+
+static void focusRender(struct CliFocusProgress *pProgress, int16_t focus, double metric, bool force)
+{
+    const int filled = focusFill(metric);
+
+    if (!pProgress->progress.tty && !force && (pProgress->lastFilled >= 0) && (abs(filled - pProgress->lastFilled) < 3))
+    {
+        return;
+    }
+
+    char bar[64];
+    char line[128];
+
+    cliProgressBar(bar, sizeof bar, filled, FOCUS_BAR_WIDTH, FOCUS_BAR_WIDTH);
+    snprintf(line, sizeof line, "focus %s %+d", bar, (int)focus);
+    cliProgressLine(&pProgress->progress, line);
+    pProgress->lastFilled = filled;
+}
+
+void cliFocusProgressBegin(struct CliFocusProgress *pProgress)
 {
     if (pProgress == nullptr)
     {
@@ -242,64 +292,27 @@ void cliFocusProgressBegin(struct CliFocusProgress *pProgress, int coarseTotal, 
 
     memset(pProgress, 0, sizeof *pProgress);
     cliProgressBegin(&pProgress->progress);
-    pProgress->coarseTotal    = coarseTotal;
-    pProgress->fineTotal      = fineTotal;
-    pProgress->lastCoarseStep = -1;
-    pProgress->lastFineStep   = -1;
+    pProgress->lastFilled = -1;
 }
 
-void cliFocusProgressStep(struct CliFocusProgress *pProgress, const char *szTag, int16_t focus)
+void cliFocusProgressStep(struct CliFocusProgress *pProgress, int16_t focus, double metric)
 {
-    if ((pProgress == nullptr) || (szTag == nullptr))
+    if (pProgress == nullptr)
     {
         return;
     }
 
-    if (strcmp(szTag, "coarse") == 0)
-    {
-        pProgress->coarseDone++;
-    }
-    else if (strcmp(szTag, "fine") == 0)
-    {
-        pProgress->fineDone++;
-    }
-    else
+    focusRender(pProgress, focus, metric, false);
+}
+
+void cliFocusProgressCommit(struct CliFocusProgress *pProgress, int16_t focus, double metric)
+{
+    if (pProgress == nullptr)
     {
         return;
     }
 
-    if ((pProgress->coarseTotal > 0) && (pProgress->coarseDone > pProgress->coarseTotal))
-    {
-        pProgress->coarseDone = pProgress->coarseTotal;
-    }
-    if ((pProgress->fineTotal > 0) && (pProgress->fineDone > pProgress->fineTotal))
-    {
-        pProgress->fineDone = pProgress->fineTotal;
-    }
-
-    if (!pProgress->progress.tty)
-    {
-        const int coarseStep = (pProgress->coarseTotal > 0) ? (pProgress->coarseDone * 10 / pProgress->coarseTotal) : 0;
-        const int fineStep   = (pProgress->fineTotal > 0) ? (pProgress->fineDone * 10 / pProgress->fineTotal) : 0;
-        const bool complete  = (pProgress->coarseDone >= pProgress->coarseTotal) &&
-                               (pProgress->fineDone >= pProgress->fineTotal);
-
-        if ((coarseStep == pProgress->lastCoarseStep) && (fineStep == pProgress->lastFineStep) && !complete)
-        {
-            return;
-        }
-        pProgress->lastCoarseStep = coarseStep;
-        pProgress->lastFineStep   = fineStep;
-    }
-
-    char coarseBar[24];
-    char fineBar[24];
-    char line[128];
-
-    cliProgressBar(coarseBar, sizeof coarseBar, pProgress->coarseDone, pProgress->coarseTotal, 12);
-    cliProgressBar(fineBar, sizeof fineBar, pProgress->fineDone, pProgress->fineTotal, 12);
-    snprintf(line, sizeof line, "focus %+d coarse %s fine %s", (int)focus, coarseBar, fineBar);
-    cliProgressLine(&pProgress->progress, line);
+    focusRender(pProgress, focus, metric, true);
 }
 
 void cliFocusProgressEnd(struct CliFocusProgress *pProgress)

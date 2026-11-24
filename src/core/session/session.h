@@ -230,12 +230,6 @@ int sessionAcquire(struct Session *pSession, const struct Acquisition *pAcquisit
  */
 int sessionAutofocus(struct Session *pSession, unsigned frame, int16_t *pOutFocus);
 
-/** @brief number of coarse focus sweep positions (for CLI progress bars) */
-int sessionFocusCoarseSteps(void);
-
-/** @brief number of fine focus sweep positions (for CLI progress bars) */
-int sessionFocusFineSteps(void);
-
 /**
  * @brief measure the focus score at one position and commit it
  *

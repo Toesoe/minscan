@@ -90,16 +90,6 @@ static void focusLog(struct Session *pSession, const char *szStep, int16_t focus
     }
 }
 
-int sessionFocusCoarseSteps(void)
-{
-    return FOCUS_COARSE_STEPS;
-}
-
-int sessionFocusFineSteps(void)
-{
-    return FOCUS_FINE_STEPS;
-}
-
 /**
  * @brief score a focus measurement using the mean squared difference between consecutive samples
  *

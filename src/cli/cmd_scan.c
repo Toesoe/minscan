@@ -326,7 +326,7 @@ static int scanCapture(const struct ScanOptions *pOpts)
 
     if (pOpts->autofocus)
     {
-        cliFocusProgressBegin(&focusProgress, sessionFocusCoarseSteps(), sessionFocusFineSteps());
+        cliFocusProgressBegin(&focusProgress);
         session.pFocusLog = cliFocusLog;
         session.pFocusCtx = &focusProgress;
 

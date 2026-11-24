@@ -37,3 +37,22 @@ def test_candidates_fall_back_to_a_source_builddir(monkeypatch, tmp_path) -> Non
     candidates = _api._library_candidates()
 
     assert str(root / "builddir" / "libminscan.so") in candidates
+
+
+def test_devices_does_not_probe_by_default(monkeypatch) -> None:
+    from minscan import _api
+
+    called = False
+
+    def _probe(_path):
+        nonlocal called
+        called = True
+        return _api.Media.FORMAT_120
+
+    monkeypatch.setattr(_api, "detect", lambda: "/dev/sg9")
+    monkeypatch.setattr(_api, "probe", _probe)
+
+    assert _api.devices() == [("/dev/sg9", None)]
+    assert called is False
+    assert _api.devices(probe_media=True) == [("/dev/sg9", _api.Media.FORMAT_120)]
+    assert called is True

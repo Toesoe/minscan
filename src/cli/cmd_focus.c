@@ -110,7 +110,7 @@ int cmd_focus(int argc, char **argv, arg_dstr_t res, void *ctx)
 
     cliInstallCancel(&session);
 
-    cliFocusProgressBegin(&focusProgress, sessionFocusCoarseSteps(), sessionFocusFineSteps());
+    cliFocusProgressBegin(&focusProgress);
     session.pFocusLog = cliFocusLog;
     session.pFocusCtx = &focusProgress;
 

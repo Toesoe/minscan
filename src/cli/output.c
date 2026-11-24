@@ -6,8 +6,6 @@
 
 void cliFocusLog(void *pCtx, const char *szTag, int16_t focus, double metric)
 {
-    (void)metric;
-
     struct CliFocusProgress *pProgress = pCtx;
 
     if ((pProgress == nullptr) || (szTag == nullptr))
@@ -19,8 +17,13 @@ void cliFocusLog(void *pCtx, const char *szTag, int16_t focus, double metric)
         cliFocusProgressEnd(pProgress);
         return;
     }
+    if (strcmp(szTag, "commit") == 0)
+    {
+        cliFocusProgressCommit(pProgress, focus, metric);
+        return;
+    }
     if ((strcmp(szTag, "coarse") == 0) || (strcmp(szTag, "fine") == 0))
     {
-        cliFocusProgressStep(pProgress, szTag, focus);
+        cliFocusProgressStep(pProgress, focus, metric);
     }
 }
