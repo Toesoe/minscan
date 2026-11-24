@@ -2,7 +2,7 @@ project('minscan', 'c',
   version: '0.1.0',
   meson_version: '>=1.2',
   default_options: [
-    'c_std=c23',
+    'c_std=c2x',
     'warning_level=3',
     'buildtype=debugoptimized',
     'b_lundef=true',
