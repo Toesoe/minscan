@@ -176,7 +176,7 @@ static enum ScanParseResult scanParseArgs(int argc, char **argv, arg_dstr_t res,
 
     pOut->ev = ev->count ? ev->dval[0] : 0.0;
 
-    if (!isfinite(pOut->ev) || (pOut->ev < -2.5) || (pOut->ev > 2.5))
+    if (!(pOut->ev >= -2.5 && pOut->ev <= 2.5))
     {
         minscanLog(MS_LOG_ERROR, "scan: EV %.3f is outside -2.5..2.5", pOut->ev);
         arg_freetable(argtable, sizeof argtable / sizeof argtable[0]);

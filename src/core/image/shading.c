@@ -12,6 +12,7 @@
 #include "image.h"
 #include "src/core/error.h"
 #include "src/core/log.h"
+#include "src/core/num.h"
 
 #include <math.h>
 #include <stdlib.h>
@@ -35,7 +36,7 @@ int imageBaseGain(struct Frame *pFrame, const uint16_t *pBase, int baseCols, con
 
     for (int ch = 0; ch < 3; ch++)
     {
-        if (!isfinite(strength[ch]) || (isless(strength[ch], 0.0)))
+        if (!numIsFinite(strength[ch]) || (strength[ch] < 0.0))
         {
             return MS_ERR_RANGE;
         }

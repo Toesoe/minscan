@@ -468,8 +468,8 @@ static bool iceCalibrate(const struct Frame *pFrame, struct IceCalibration *pOut
             float deltaIr  = quadIr / 16.0f - tileIr / 64.0f;
             float slope    = deltaIr / deltaRed;
 
-            // isfinite() also rejects NaN
-            if (isfinite(slope) && fabsf(slope) <= ICE_SLOPE_LIMIT)
+            // NaN and +/-inf both fail the bound comparison
+            if (fabsf(slope) <= ICE_SLOPE_LIMIT)
             {
                 float w = deltaRed * deltaRed * tileRaw * tileRaw;
                 crossNum += (double)slope * (double)w;
